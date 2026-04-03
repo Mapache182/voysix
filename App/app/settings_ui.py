@@ -469,8 +469,8 @@ class SettingsDialog(QDialog):
                 from app.tailscale_manager import TailscaleDownloadDialog
                 reply = QMessageBox.question(
                     self,
-                    "Tailscale Required",
-                    "Tailscale is not installed on this system. It is required for discovering remote workers in your private network.\n\nDo you want to download and install it now?",
+                    tr("ts_not_found_title"),
+                    tr("ts_not_found_msg"),
                     QMessageBox.Yes | QMessageBox.No
                 )
                 if reply == QMessageBox.Yes:

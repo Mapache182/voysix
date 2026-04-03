@@ -2,7 +2,7 @@ import whisper
 import tempfile
 import threading
 
-from config_store import get_config
+from .config_store import get_config
 
 _models = {}
 _lock = threading.Lock()

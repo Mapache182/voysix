@@ -107,12 +107,6 @@ class WorkerClient:
             return False, str(e)
     
     def get_tailscale_status(self, auth_key=None):
-        # 🔹 DISABLED AS REQUESTED
-        return {
-            "connected": False,
-            "state": "Discovery Disabled",
-            "error": "Worker discovery is temporarily commented out."
-        }
         try:
             # 1. Check current status
             print(f"DEBUG [Tailscale]: Running status check...")
@@ -216,9 +210,6 @@ class WorkerClient:
 
 
     def discover(self, node_name=None):
-        # 🔹 DISABLED AS REQUESTED
-        return None
-        
         if self.base_url:
             print(f"DEBUG: Discovery using manual_url='{self.base_url}'")
             return self.base_url

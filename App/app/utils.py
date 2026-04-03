@@ -1,0 +1,83 @@
+import ctypes
+import time
+import pyperclip
+import pyautogui
+import os
+import sys
+
+def get_resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for cx_Freeze """
+    if getattr(sys, 'frozen', False):
+        # The path to the executable's directory
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        # Path to the App directory (one level up from app/utils.py)
+        # Assuming app/utils.py is inside App/app/
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    return os.path.join(base_dir, relative_path)
+
+
+try:
+    user32 = ctypes.windll.user32
+    VK_CONTROL = 0x11
+    VK_V = 0x56
+    VK_MEDIA_PLAY_PAUSE = 0xB3
+    KEYEVENTF_KEYUP = 0x0002
+    HAS_WIN32 = True
+except AttributeError:
+    HAS_WIN32 = False
+
+def toggle_media_playback():
+    """Toggle system media playback (Pause/Play) on Windows."""
+    if HAS_WIN32:
+        user32.keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0)
+        user32.keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0)
+    else:
+        # Fallback for other platforms (unsupported for now)
+        pass
+
+def native_paste():
+    """Platform-specific keyboard paste."""
+    if HAS_WIN32:
+        # Lowest-level Windows API keyboard simulation
+        user32.keybd_event(VK_CONTROL, 0, 0, 0)
+        user32.keybd_event(VK_V, 0, 0, 0)
+        user32.keybd_event(VK_V, 0, KEYEVENTF_KEYUP, 0)
+        user32.keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0)
+    else:
+        # Linux / Mac fallback
+        pyautogui.hotkey('ctrl', 'v')
+
+def output_transcription(text, mode="type", delay=0.7, cleanup=0, add_space=False, add_newline=False):
+    if not text:
+        return
+
+    # Prepend space or newline if requested
+    prefix = ""
+    if add_newline:
+        prefix += "\n"
+    if add_space:
+        prefix += " "
+    
+    text = prefix + text
+
+    if mode == "console":
+        print(f"Transcription: {text}")
+    
+    elif mode == "clipboard":
+        pyperclip.copy(text)
+        print("Copied to clipboard.")
+
+    elif mode == "type":
+        pyperclip.copy(text)
+        # Give OS time to settle and focus app
+        time.sleep(delay)
+        
+        # Cleanup potential junk (like a middle-click menu if any)
+        if cleanup > 0:
+            pyautogui.press('backspace', presses=cleanup)
+            time.sleep(0.1)
+            
+        native_paste()
+        print(f"Text pasted: {text[:20]}...")

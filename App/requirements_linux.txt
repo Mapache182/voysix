@@ -1,0 +1,17 @@
+openai-whisper
+sounddevice
+pynput
+pyautogui
+pyperclip
+numpy
+torch
+PySide6
+pyyaml
+pillow
+faster-whisper
+huggingface-hub
+tokenizers
+requests
+charset-normalizer
+psutil
+pyinstaller

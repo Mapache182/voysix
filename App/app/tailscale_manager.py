@@ -124,7 +124,15 @@ class TailscaleDownloadDialog(QDialog):
             
     def on_finished(self, success, msg):
         if success:
-            QMessageBox.information(self, "Success", msg)
+            reply = QMessageBox.warning(
+                self, 
+                tr("ts_reboot_required"), 
+                tr("ts_reboot_msg") + "\n\n" + tr("ts_restart_now"),
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.Yes:
+                import os
+                os.system("shutdown /r /t 0")
             self.accept()
         else:
             QMessageBox.critical(self, "Download Error", f"Failed to download Tailscale:\n{msg}")

@@ -77,7 +77,7 @@ jobs:
       - name: Build with cx_Freeze
         working-directory: ./App
         run: |
-          python setup_msi.py build
+          python build_dist.py
 
       - name: Compile Inno Setup Installer (ISCC)
         working-directory: ./App

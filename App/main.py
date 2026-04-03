@@ -135,12 +135,12 @@ class AppController(QObject):
         self.worker_info = None
         
         # Periodic discovery for remote worker
-        # self.discovery_timer = QTimer(self)
-        # self.discovery_timer.timeout.connect(self._background_discovery)
-        # self.discovery_timer.start(60000) # Check every 60 seconds
+        self.discovery_timer = QTimer(self)
+        self.discovery_timer.timeout.connect(self._background_discovery)
+        self.discovery_timer.start(60000) # Check every 60 seconds
         
         # Initial check
-        # QTimer.singleShot(2000, self._background_discovery)
+        QTimer.singleShot(2000, self._background_discovery)
 
     def on_press(self):
         try:
@@ -265,33 +265,50 @@ class AppController(QObject):
             print(f"Transcription started for {len(audio)/16000:.2f}s of audio...")
             self.abort_transcription = False # Reset flag at start
             
-            # 🔹 Remote logic (DISABLED AS REQUESTED)
+            # --- Remote Mode Logic with Fallback ---
             transcriber = self.transcriber
-            # if self.config.get("remote_mode", False):
-            #     from app.transcriber import RemoteWhisperTranscriber
-            #     # Use cached URL from background discovery if available
-            #     remote = RemoteWhisperTranscriber(
-            #         self.config.get("remote_worker_name", "worker-node"),
-            #         api_key=self.config.get("remote_api_key", ""),
-            #         manual_url=self.config.get("remote_worker_url", "")
-            #     )
-            #     
-            #     # If we have a cached URL, ensure the client uses it
-            #     if self.worker_url:
-            #         remote.client.base_url = self.worker_url
-            #     
-            #     if remote.load_model():
-            #         transcriber = remote
-            #         print(f"Using REMOTE transcriber (worker at {remote.client.base_url})")
-            #     else:
-            #         print("Worker not available, falling back to LOCAL.")
-            #         # 🔹 If falling back to local, ensure model is loaded
-            #         if transcriber.model is None:
-            #             print("Local model not loaded, loading now...")
-            #             self.status_changed.emit("loading")
-            #             transcriber.load_model(self.config["model_name"], self.config.get("engine", "openai-whisper"))
-            #             self.status_changed.emit("processing")
-            
+            if self.config.get("remote_mode", False):
+                from app.transcriber import RemoteWhisperTranscriber
+                
+                # Check for discoverable worker
+                remote = RemoteWhisperTranscriber(
+                    self.config.get("remote_worker_name", "worker-node"),
+                    api_key=self.config.get("remote_api_key", ""),
+                    manual_url=self.config.get("remote_worker_url", "")
+                )
+                
+                # Use cached URL from background discovery if available for faster check
+                if self.worker_url:
+                    remote.client.base_url = self.worker_url
+                
+                # Crucial Check: Verify if remote worker is actually ONLINE and HEALTHY
+                # This prevents sending large audio blobs to a dead endpoint
+                is_available = False
+                if remote.client.base_url:
+                    print(f"Verifying remote worker health at {remote.client.base_url}...")
+                    if remote.client.check_health():
+                        is_available = True
+                
+                # If cached URL is invalid, try new discovery
+                if not is_available:
+                    print("Remote worker status uncertain. Attempting discovery...")
+                    if remote.load_model(): # load_model calls discover()
+                        if remote.client.check_health():
+                            is_available = True
+                            self.worker_url = remote.client.base_url
+                
+                if is_available:
+                    transcriber = remote
+                    print(f"✅ Using REMOTE transcriber (worker at {remote.client.base_url})")
+                else:
+                    print("⚠️ Remote worker NOT REACHABLE. Falling back to LOCAL.")
+                    # 🔹 Ensure local model is loaded if we fall back
+                    if transcriber.model is None:
+                        print("Local model not loaded, loading now...")
+                        self.status_changed.emit("loading")
+                        transcriber.load_model(self.config["model_name"], self.config.get("engine", "openai-whisper"))
+                        self.status_changed.emit("processing")
+
             text = transcriber.transcribe(
                 audio, 
                 language=self.config.get("language", "auto"),

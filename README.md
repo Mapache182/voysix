@@ -90,21 +90,28 @@ If you just want to use Voysix, wait for the first release or follow the build s
 ## 🔄 Automated CI/CD
 
 Voysix uses **GitHub Actions** for automated building and quality assurance:
-- **`worker-v*`** tags: Automatically builds the Docker image and pushes to GHCR.
-- **`app-v*`** tags: Automatically compiles the Windows MSI and creates a GitHub Release.
+- **`worker-v*`** tags: Automatically builds the Docker image and pushes to both **GitHub Container Registry (GHCR)** and **Docker Hub**.
+- **`app-v*`** tags: Automatically compiles the Windows Setup EXE installer and creates a GitHub Release.
+
 
 ---
 
 ## 📦 Building Standalone Version
 
-To build the Windows installer (`.exe`) manually:
-1. Ensure all dependencies from `App/requirements.txt` are installed.
-2. Run:
+Для сборки Windows-версии (EXE + установщик) используется автоматизированный скрипт:
+
+1. Перейдите в папку приложения: `cd App`
+2. Запустите сборку:
    ```bash
-   python App/setup_msi.py build
-   & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" App/installer/installer.iss
+   python build_dist.py
    ```
-The installer will be placed in `App/dist/Voysix_Setup.exe`.
+
+**Что делает этот скрипт:**
+- Автоматически увеличивает версию (patch) в `version.txt`, `main.py` и `setup.py`.
+- Компилирует Python-код в `.exe` с помощью **cx_Freeze**.
+- Собирает финальный инсталлятор через **Inno Setup**.
+
+Результат будет доступен в: `App/dist/Voysix_Setup.exe`.
 
 ---
 

@@ -1,0 +1,28 @@
+image: docker:24.0.5
+
+variables:
+  DOCKER_BUILDKIT: 1
+  DOCKER_IMAGE_WORKER: $CI_REGISTRY_IMAGE/worker:$CI_COMMIT_SHORT_SHA
+  DOCKER_IMAGE_WORKER_LATEST: $CI_REGISTRY_IMAGE/worker:latest
+
+stages: 
+  - build
+
+build_worker:     
+  services:
+    - docker:24.0.5-dind
+  stage: build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_COMMIT_REF_NAME =~ /main/
+      changes:
+        - .gitlab-ci.yml
+        - worker/**/*
+        - Dockerfile
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build --cache-from=$DOCKER_IMAGE_WORKER_LATEST -t $DOCKER_IMAGE_WORKER -t $DOCKER_IMAGE_WORKER_LATEST -f worker/Dockerfile worker/
+    - docker push $DOCKER_IMAGE_WORKER
+    - docker push $DOCKER_IMAGE_WORKER_LATEST
+

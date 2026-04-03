@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Voysix
+Exec=/usr/bin/voysix
+Icon=voysix
+Type=Application
+Categories=Utility;AudioVideo;
+Comment=Powerful Speech-to-Text for your Desktop
+Terminal=false
+StartupNotify=true

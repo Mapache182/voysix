@@ -1,0 +1,97 @@
+name: CI/CD
+
+on:
+  push:
+    tags:
+      - 'worker-*'
+      - 'app-*'
+
+jobs:
+  # --- JOB 1: Сборка и пуш Docker образа для Worker ---
+  build-worker:
+    if: startsWith(github.ref, 'refs/tags/worker-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}/worker
+            ${{ secrets.DOCKERHUB_USERNAME }}/voysix-worker
+          tags: |
+            type=match,pattern=worker-(.*),group=1
+            type=sha,format=short
+
+      - name: Build and push Worker Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./worker
+          file: ./worker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # --- JOB 2: Сборка .exe для приложения (Windows) ---
+  build-app:
+    if: startsWith(github.ref, 'refs/tags/app-')
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Устанавливаем CPU-версию torch для ускорения сборки и уменьшения размера
+          pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install -r App/requirements.txt
+
+      - name: Build with cx_Freeze
+        working-directory: ./App
+        run: |
+          python setup_msi.py build
+
+      - name: Compile Inno Setup Installer (ISCC)
+        working-directory: ./App
+        run: |
+          # ISCC предустановлен на windows-latest
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/installer.iss
+
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Release ${{ github.ref_name }}"
+          files: App/dist/Voysix_Setup.exe
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

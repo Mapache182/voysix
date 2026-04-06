@@ -42,7 +42,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.63"
+        self.version = "4.4.64"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:
@@ -355,11 +355,15 @@ class AppController(QObject):
                 prompt = self.config.get("remote_initial_prompt", "")
                 no_speech = self.config.get("remote_no_speech_threshold", 0.6)
                 logprob = self.config.get("remote_logprob_threshold", -1.0)
-                compression = self.config.get("compression_ratio_threshold", 2.4)
-                condition = self.config.get("condition_on_previous_text", True)
-                silence_thr = self.config.get("hallucination_silence_threshold", 2.0)
-                rep_pen = self.config.get("repetition_penalty", 1.0)
-                no_repeat_ngram = self.config.get("no_repeat_ngram_size", 0)
+                compression = self.config.get("remote_compression_ratio_threshold", 2.4)
+                condition = self.config.get("remote_condition_on_previous_text", True)
+                silence_thr = self.config.get("remote_hallucination_silence_threshold", 2.0)
+                rep_pen = self.config.get("remote_repetition_penalty", 1.0)
+                no_repeat_ngram = self.config.get("remote_no_repeat_ngram_size", 0)
+                
+                # Selection of replacements and normalization
+                repl_str = self.config.get("remote_word_replacements", "")
+                smart_norm = self.config.get("remote_smart_normalization", False)
             else:
                 lang = self.config.get("language", "auto")
                 model = self.config.get("model_name", "base")
@@ -374,6 +378,9 @@ class AppController(QObject):
                 silence_thr = self.config.get("hallucination_silence_threshold", 2.0)
                 rep_pen = self.config.get("repetition_penalty", 1.0)
                 no_repeat_ngram = self.config.get("no_repeat_ngram_size", 0)
+                
+                repl_str = self.config.get("word_replacements", "")
+                smart_norm = self.config.get("smart_normalization", False)
 
             text = transcriber.transcribe(
                 audio, 
@@ -390,6 +397,8 @@ class AppController(QObject):
                 hallucination_silence_threshold=silence_thr,
                 repetition_penalty=rep_pen,
                 no_repeat_ngram_size=no_repeat_ngram,
+                smart_normalization=smart_norm,
+                word_replacements=repl_str,
                 cancellation_callback=lambda: self.abort_transcription
             )
             
@@ -398,14 +407,12 @@ class AppController(QObject):
                 self.status_changed.emit("idle")
                 return
             
-            # 🔹 Post-processing: Replacements and Normalization
+            # 🔹 Post-processing (still applied here for safety or for local mode)
+            # If it was remote, the worker already did it, but doing it again with same rules is idempotent.
             from app.utils import apply_replacements, apply_smart_normalization
             
-            # Select replacements dictionary
-            repl_str = self.config.get("remote_word_replacements", "") if self.config.get("remote_mode", False) and is_available else self.config.get("word_replacements", "")
-            
             text = apply_replacements(text, repl_str)
-            if self.config.get("smart_normalization", False):
+            if smart_norm:
                 text = apply_smart_normalization(text)
                 
             print(f"Transcription finished: '{text}'")

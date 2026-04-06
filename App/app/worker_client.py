@@ -329,7 +329,8 @@ class WorkerClient:
 
     def transcribe(self, audio_np, model_name="base", engine="openai-whisper", language="auto", beam_size=5, temperature=0.0, initial_prompt=None,
                   no_speech_threshold=0.6, logprob_threshold=-1.0, compression_ratio_threshold=2.4, condition_on_previous_text=True,
-                  hallucination_silence_threshold=2.0, repetition_penalty=1.0, no_repeat_ngram_size=0):
+                  hallucination_silence_threshold=2.0, repetition_penalty=1.0, no_repeat_ngram_size=0,
+                  smart_normalization=False, word_replacements=""):
         if not self.base_url:
             return "Worker not connected."
 
@@ -348,7 +349,9 @@ class WorkerClient:
                 "condition_on_previous_text": condition_on_previous_text,
                 "hallucination_silence_threshold": hallucination_silence_threshold,
                 "repetition_penalty": repetition_penalty,
-                "no_repeat_ngram_size": no_repeat_ngram_size
+                "no_repeat_ngram_size": no_repeat_ngram_size,
+                "smart_normalization": smart_normalization,
+                "word_replacements": word_replacements
             }
             headers = self._get_headers()
             requests.post(f"{self.base_url}/config", json=worker_cfg, headers=headers, timeout=2)

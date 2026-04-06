@@ -18,6 +18,8 @@ _config = {
     "hallucination_silence_threshold": 2.0, # Faster-Whisper specific
     "repetition_penalty": 1.0, # Faster-Whisper specific
     "no_repeat_ngram_size": 0, # Faster-Whisper specific
+    "smart_normalization": False,
+    "word_replacements": "",
 }
 
 _capabilities = {

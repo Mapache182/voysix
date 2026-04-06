@@ -72,7 +72,12 @@ TRANSLATIONS = {
         "word_replacements": "Word Replacements (find:replace):",
         "smart_normalization": "Smart Normalization (Numbers/Dates):",
         "no_speech_threshold": "No-Speech Threshold:",
-        "logprob_threshold": "Logprob Threshold:"
+        "logprob_threshold": "Logprob Threshold:",
+        "compression_ratio_threshold": "Compression Threshold:",
+        "condition_on_previous_text": "Condition on Previous Text:",
+        "hallucination_silence_threshold": "Hallucination Threshold:",
+        "repetition_penalty": "Repetition Penalty:",
+        "no_repeat_ngram_size": "No-Repeat N-gram Size:"
     },
     "ru": {
         "ready": "Готов",
@@ -147,7 +152,12 @@ TRANSLATIONS = {
         "word_replacements": "Словарь автозамен (найти:заменить):",
         "smart_normalization": "Умная нормализация (числа/даты):",
         "no_speech_threshold": "Порог отсутствия речи:",
-        "logprob_threshold": "Порог логистич. вер-ти:"
+        "logprob_threshold": "Порог логистич. вер-ти:",
+        "compression_ratio_threshold": "Порог сжатия (КПД):",
+        "condition_on_previous_text": "Учитывать прошлый текст:",
+        "hallucination_silence_threshold": "Порог галлюцинаций:",
+        "repetition_penalty": "Штраф за повторы:",
+        "no_repeat_ngram_size": "Запрет повторов N-грамм:"
     },
     "es": {
         "ready": "Listo",
@@ -250,7 +260,11 @@ HELP_TEXT = {
         "word_replacements": "<b>Word Replacements:</b><br>List of search/replace pairs (one per line). Format: <i>find:replace</i>. Example: <i>колл:call</i>",
         "smart_normalization": "<b>Smart Normalization:</b><br>Automatically formats numbers, dates, and units for better readability.",
         "no_speech": "<b>No-Speech Threshold:</b><br>If the model's 'no_speech' probability is higher than this, the segment is ignored. Default is 0.6.",
-        "logprob": "<b>Logprob Threshold:</b><br>Minimum average log-probability for a segment. If lower, the segment is considered silence/noise."
+        "logprob": "<b>Logprob Threshold:</b><br>Minimum average log-probability for a segment. If lower, the segment is considered silence/noise.",
+        "compression": "<b>Compression Threshold:</b><br>If the compression ratio is higher than this, the segment is considered repetitive/low quality. Default is 2.4.",
+        "hallucination": "<b>Hallucination Threshold:</b><br>Silence threshold (seconds) for hallucination detection. High values reduce 'loops'.",
+        "repetition": "<b>Repetition Penalty:</b><br>Penalty for repeating same tokens. Helps with loops in Faster-Whisper.",
+        "no_repeat": "<b>No-Repeat N-gram:</b><br>Prevents repeating same word sequences of this length."
     },
     "ru": {
         "model": "<b>Модель Whisper:</b><br>'tiny' — самая быстрая, 'large' — самая точная. 'base' рекомендуется для большинства.",
@@ -283,7 +297,11 @@ HELP_TEXT = {
         "word_replacements": "<b>Словарь автозамен:</b><br>Список пар 'поиск:замена' (одна на строку). Пример: <i>колл:call</i>. Исправляет ошибки нейросети на лету.",
         "smart_normalization": "<b>Умная нормализация:</b><br>Автоматически форматирует числа, даты и время для лучшей читаемости.",
         "no_speech": "<b>Порог тишины:</b><br>Если вероятность 'отсутствия речи' выше этого значения, сегмент будет пропущен. Помогает убрать фоновый шум.",
-        "logprob": "<b>Порог вероятности:</b><br>Минимальная уверенность модели в тексте. Если ниже — текст считается галлюцинацией."
+        "logprob": "<b>Порог вероятности:</b><br>Минимальная уверенность модели в тексте. Если ниже — текст считается галлюцинацией.",
+        "compression": "<b>Порог сжатия:</b><br>Если текст слишком сильно сжимается (подозрение на повторы), он будет отброшен. Стандарт: 2.4.",
+        "hallucination": "<b>Порог галлюцинаций:</b><br>Длительность тишины (сек), после которой модель может начать 'выдумывать' текст. Помогает убрать эхо.",
+        "repetition": "<b>Штраф за повторы:</b><br>Коэффициент наказания за одинаковые токены. Эффективно против зацикливания.",
+        "no_repeat": "<b>Запрет N-грамм:</b><br>Запрещает повторение последовательностей слов указанной длины."
     },
     "es": {
         "model": "<b>Modelo Whisper:</b><br>'tiny' es el más rápido, 'large' el más preciso. 'base' se recomienda para la mayoría.",

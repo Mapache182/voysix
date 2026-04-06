@@ -48,6 +48,8 @@ def warm_up():
                 _initializing = False
 
 
+MODELS_DIR = os.getenv("MODELS_DIR", "/data/models")
+
 def get_model(name: str, engine: str, device: str):
     key = (name, engine, device)
     if key not in _models:
@@ -55,9 +57,9 @@ def get_model(name: str, engine: str, device: str):
         if engine == "faster-whisper":
             # For Faster-Whisper we use int8 on CPU and float16 on GPU for maximum speed
             compute_type = "float16" if device == "cuda" else "int8"
-            _models[key] = WhisperModel(name, device=device, compute_type=compute_type)
+            _models[key] = WhisperModel(name, device=device, compute_type=compute_type, download_root=MODELS_DIR)
         else:
-            _models[key] = whisper.load_model(name, device=device)
+            _models[key] = whisper.load_model(name, device=device, download_root=MODELS_DIR)
     return _models[key]
 
 

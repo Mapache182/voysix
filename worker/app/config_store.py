@@ -4,7 +4,7 @@ import os
 _lock = threading.Lock()
 
 _config = {
-    "model": "base",
+    "model": os.getenv("MODEL_NAME", "base"),
     "language": "auto",
     "engine": "openai-whisper",
     "device": os.getenv("DEFAULT_DEVICE", "cpu"), # 'cpu' or 'cuda'

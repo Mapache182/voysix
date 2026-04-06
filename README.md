@@ -100,33 +100,50 @@ If you just want to use Voysix, wait for the first release or follow the build s
    # docker pull your-username/voysix-worker:latest
    # docker run -d --name voysix-worker -e TS_AUTHKEY=<your-key> your-username/voysix-worker
 
-#### ⚙️ Worker Environment Variables
-The following variables can be passed to the container using `-e KEY=VALUE`:
+#### ⚙️ Worker Configuration (Environment Variables)
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `TS_AUTHKEY` | **(Required)** Your Tailscale Auth Key to join the private network. | - |
-| `API_KEY` | Optional security key for the worker. Must match the "Worker API Key" in the app settings. | - |
-| `GPU_ENABLED` | Set to `1` to enable NVIDIA GPU acceleration. | `0` |
-| `MODEL_NAME` | Default whisper model to load on startup (tiny, base, small, etc). | `base` |
+Pass these to the container using `-e KEY=VALUE`. 
 
-#### ⚡ GPU Acceleration (Optional)
-To enable NVIDIA GPU support in the worker, ensure you have the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed on your host.
+| Variable | Requirement | Description | Default |
+| :--- | :--- | :--- | :--- |
+| `TS_AUTHKEY` | **Required** | Your Tailscale Auth Key to join the private network. Generate it in Tailscale Settings. | - |
+| `API_KEY` | Optional | Shared secret between the app and worker. Must match the "Worker API Key" in the app settings. | - |
+| `MODEL_NAME` | Optional | The Whisper model to load on startup (tiny, base, small, medium, large, distil-large-v3). | `base` |
+| `GPU_ENABLED` | Optional | Set to `1` to enable NVIDIA GPU support. This triggers automatic download of CUDA libraries (~3GB). | `0` |
+| `TS_HOSTNAME` | Optional | The hostname visible in your Tailscale admin panel. | `voysix-worker` |
 
-Then, run the container with the `GPU_ENABLED=1` environment variable and the `--gpus all` flag:
+#### 🏃 Running the Worker
 
+> [!IMPORTANT]
+> **Persistent Data**: We highly recommend mounting this volume to keep the worker's identity and AI models between restarts:
+> - `-v voysix_data:/data` — **Mandatory for stability**: Stores both Tailscale identity and downloaded AI models. This prevents creating duplicate nodes and re-downloading large files (~3GB) on every restart.
+
+**1. Minimal Run (CPU-only)**
+Use this for stable, general-purpose transcription.
+```bash
+docker run -d --name voysix-worker \
+  --restart unless-stopped \
+  -v voysix_data:/data \
+  -e TS_AUTHKEY=<your-tailscale-key> \
+  -e TS_HOSTNAME=voysix-worker \
+  voysix-worker
+```
+
+**2. Full Power (GPU Acceleration)**
+Hardware-accelerated setup with full persistence.
 ```bash
 docker run -d --name voysix-worker \
   --restart unless-stopped \
   --gpus all \
+  -v voysix_data:/data \
   -e TS_AUTHKEY=<your-tailscale-key> \
-  -e API_KEY=<your-api-key> \
+  -e TS_HOSTNAME=voysix-worker-gpu \
+  -e API_KEY=<your-worker-api-key> \
   -e GPU_ENABLED=1 \
   voysix-worker
 ```
 
-**Note:** On the first run with `GPU_ENABLED=1`, the worker will detect the missing CUDA dependencies and automatically download **~3GB** of CUDA-enabled PyTorch libraries directly into the container. This only happens once per container lifecycle.
-   ```
+**Note on folders:** The worker no longer requires mounting local input/output folders on your host. It processes everything in memory and temporary container storage.
 
 ---
 

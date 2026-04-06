@@ -294,6 +294,11 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(tab)
         form = QFormLayout()
 
+        # Enabled
+        self.local_enabled_chk = QCheckBox(tr("enabled"))
+        self.local_enabled_chk.setChecked(self.config.get("local_whisper_enabled", True))
+        self.add_info_row(form, "local_whisper", self.local_enabled_chk, "local_whisper")
+
         # Engine
         self.engine_cb = QComboBox()
         self.engine_cb.addItem("OpenAI Whisper", "openai-whisper")
@@ -696,6 +701,7 @@ class SettingsDialog(QDialog):
         self.vol_timer.stop()
         self.status_timer.stop()
         self.config["model_name"] = self.model_cb.currentText()
+        self.config["local_whisper_enabled"] = self.local_enabled_chk.isChecked()
         self.config["selected_mic"] = self.mic_cb.currentData()
         self.config["engine"] = self.engine_cb.currentData()
         self.config["language"] = self.lang_cb.currentData()

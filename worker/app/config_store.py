@@ -12,7 +12,12 @@ _config = {
     "beam_size": 1,
     "initial_prompt": "",
     "no_speech_threshold": 0.6,
-    "logprob_threshold": -1.0
+    "logprob_threshold": -1.0,
+    "compression_ratio_threshold": 2.4,
+    "condition_on_previous_text": True,
+    "hallucination_silence_threshold": 2.0, # Faster-Whisper specific
+    "repetition_penalty": 1.0, # Faster-Whisper specific
+    "no_repeat_ngram_size": 0, # Faster-Whisper specific
 }
 
 _capabilities = {

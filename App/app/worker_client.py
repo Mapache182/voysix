@@ -328,13 +328,13 @@ class WorkerClient:
             return None
 
     def transcribe(self, audio_np, model_name="base", engine="openai-whisper", language="auto", beam_size=5, temperature=0.0, initial_prompt=None,
-                  no_speech_threshold=0.6, logprob_threshold=-1.0):
+                  no_speech_threshold=0.6, logprob_threshold=-1.0, compression_ratio_threshold=2.4, condition_on_previous_text=True,
+                  hallucination_silence_threshold=2.0, repetition_penalty=1.0, no_repeat_ngram_size=0):
         if not self.base_url:
             return "Worker not connected."
 
         try:
-            # 🔹 Prepare data for worker config if needed (e.g., language, model)
-            # Worker currently has /config endpoint. We should probably update it before transcribing.
+            # 🔹 Prepare data for worker config
             worker_cfg = {
                 "model": model_name,
                 "engine": engine,
@@ -343,7 +343,12 @@ class WorkerClient:
                 "temperature": temperature,
                 "initial_prompt": initial_prompt,
                 "no_speech_threshold": no_speech_threshold,
-                "logprob_threshold": logprob_threshold
+                "logprob_threshold": logprob_threshold,
+                "compression_ratio_threshold": compression_ratio_threshold,
+                "condition_on_previous_text": condition_on_previous_text,
+                "hallucination_silence_threshold": hallucination_silence_threshold,
+                "repetition_penalty": repetition_penalty,
+                "no_repeat_ngram_size": no_repeat_ngram_size
             }
             headers = self._get_headers()
             requests.post(f"{self.base_url}/config", json=worker_cfg, headers=headers, timeout=2)

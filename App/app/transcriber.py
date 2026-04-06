@@ -118,7 +118,10 @@ class WhisperTranscriber:
                 print("Model was not loaded, nothing to unload.")
 
     def transcribe(self, audio_np, model_name="base", engine="openai-whisper", language="auto", beam_size=5, temperature=0.0, initial_prompt=None, 
-                  no_speech_threshold=0.6, logprob_threshold=-1.0, cancellation_callback=None):
+                  no_speech_threshold=0.6, logprob_threshold=-1.0, 
+                  compression_ratio_threshold=2.4, condition_on_previous_text=True,
+                  hallucination_silence_threshold=2.0, repetition_penalty=1.0, no_repeat_ngram_size=0,
+                  cancellation_callback=None):
         # Use lock to ensure we don't transcribe while loading
         with self._lock:
             if self.model is None:
@@ -136,6 +139,11 @@ class WhisperTranscriber:
                         initial_prompt=initial_prompt,
                         no_speech_threshold=no_speech_threshold,
                         log_prob_threshold=logprob_threshold,
+                        compression_ratio_threshold=compression_ratio_threshold,
+                        condition_on_previous_text=condition_on_previous_text,
+                        hallucination_silence_threshold=hallucination_silence_threshold,
+                        repetition_penalty=repetition_penalty,
+                        no_repeat_ngram_size=no_repeat_ngram_size,
                         vad_filter=True
                     )
                     full_text = ""
@@ -157,7 +165,9 @@ class WhisperTranscriber:
                         temperature=temperature,
                         initial_prompt=initial_prompt,
                         no_speech_threshold=no_speech_threshold,
-                        logprob_threshold=logprob_threshold
+                        logprob_threshold=logprob_threshold,
+                        compression_ratio_threshold=compression_ratio_threshold,
+                        condition_on_previous_text=condition_on_previous_text
                     )
                     if cancellation_callback and cancellation_callback():
                         return None
@@ -187,11 +197,19 @@ class RemoteWhisperTranscriber:
             return False
 
     def transcribe(self, audio_np, model_name="base", engine="openai-whisper", language="auto", beam_size=5, temperature=0.0, initial_prompt=None, 
-                  no_speech_threshold=0.6, logprob_threshold=-1.0, cancellation_callback=None):
+                  no_speech_threshold=0.6, logprob_threshold=-1.0, 
+                  compression_ratio_threshold=2.4, condition_on_previous_text=True,
+                  hallucination_silence_threshold=2.0, repetition_penalty=1.0, no_repeat_ngram_size=0,
+                  cancellation_callback=None):
         # The remote client might not support interruption easily, but we'll check after
         result = self.client.transcribe(
             audio_np, model_name, engine, language, beam_size, temperature, initial_prompt,
-            no_speech_threshold=no_speech_threshold, logprob_threshold=logprob_threshold
+            no_speech_threshold=no_speech_threshold, logprob_threshold=logprob_threshold,
+            compression_ratio_threshold=compression_ratio_threshold, 
+            condition_on_previous_text=condition_on_previous_text,
+            hallucination_silence_threshold=hallucination_silence_threshold,
+            repetition_penalty=repetition_penalty,
+            no_repeat_ngram_size=no_repeat_ngram_size
         )
         if cancellation_callback and cancellation_callback():
             return None

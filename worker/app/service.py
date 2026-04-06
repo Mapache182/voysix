@@ -85,6 +85,14 @@ def transcribe_audio(audio_bytes: bytes) -> str:
                         temperature=cfg.get("temperature", 0.0),
                         beam_size=cfg.get("beam_size", 1),
                         initial_prompt=cfg.get("initial_prompt", ""),
+                        no_speech_threshold=cfg.get("no_speech_threshold", 0.6),
+                        log_prob_threshold=cfg.get("logprob_threshold", -1.0),
+                        compression_ratio_threshold=cfg.get("compression_ratio_threshold", 2.4),
+                        condition_on_previous_text=cfg.get("condition_on_previous_text", True),
+                        hallucination_silence_threshold=cfg.get("hallucination_silence_threshold", 2.0),
+                        repetition_penalty=cfg.get("repetition_penalty", 1.0),
+                        no_repeat_ngram_size=cfg.get("no_repeat_ngram_size", 0),
+                        vad_filter=True
                     )
                     text = " ".join([seg.text for seg in segments]).strip()
                     return text
@@ -98,6 +106,8 @@ def transcribe_audio(audio_bytes: bytes) -> str:
                         initial_prompt=cfg.get("initial_prompt", ""),
                         no_speech_threshold=cfg.get("no_speech_threshold", 0.6),
                         logprob_threshold=cfg.get("logprob_threshold", -1.0),
+                        compression_ratio_threshold=cfg.get("compression_ratio_threshold", 2.4),
+                        condition_on_previous_text=cfg.get("condition_on_previous_text", True),
                         fp16=(device == "cuda")
                     )
                     return result["text"].strip()

@@ -48,8 +48,6 @@ DEFAULT_CONFIG = {
     "remote_temperature": 0.0,
     "remote_language": "auto",
     "remote_initial_prompt": "Это запись русской речи. Пожалуйста, соблюдайте пунктуацию и правильные окончания слов.",
-    "remote_no_speech_threshold": 0.6,
-    "remote_logprob_threshold": -1.0,
     "no_speech_threshold": 0.6,
     "logprob_threshold": -1.0,
     "compression_ratio_threshold": 2.4,
@@ -59,6 +57,15 @@ DEFAULT_CONFIG = {
     "no_repeat_ngram_size": 0,
     "smart_normalization": False,
     "word_replacements": "мерч:merch\nвоисикс:Voysix",
+    
+    "remote_no_speech_threshold": 0.6,
+    "remote_logprob_threshold": -1.0,
+    "remote_compression_ratio_threshold": 2.4,
+    "remote_condition_on_previous_text": True,
+    "remote_hallucination_silence_threshold": 2.0,
+    "remote_repetition_penalty": 1.0,
+    "remote_no_repeat_ngram_size": 0,
+    "remote_smart_normalization": False,
     "remote_word_replacements": ""
 }
 

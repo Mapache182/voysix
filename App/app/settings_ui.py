@@ -285,10 +285,6 @@ class SettingsDialog(QDialog):
         self.cleanup_sb.setValue(self.config.get("backspace_cleanup", 0))
         self.add_info_row(form, "backspace_cleanup", self.cleanup_sb, "backspace_cleanup")
 
-        self.smart_normalization_chk = QCheckBox(tr("enabled"))
-        self.smart_normalization_chk.setChecked(self.config.get("smart_normalization", False))
-        self.add_info_row(form, "smart_normalization", self.smart_normalization_chk, "smart_normalization")
-
         layout.addLayout(form)
         layout.addStretch()
         self.tabs.addTab(tab, tr("tab_general"))
@@ -308,7 +304,7 @@ class SettingsDialog(QDialog):
 
         # Model
         self.model_cb = QComboBox()
-        self.model_cb.addItems(["tiny", "base", "small", "medium", "large"])
+        self.model_cb.addItems(["tiny", "base", "small", "medium", "large", "distil-large-v3"])
         self.model_cb.setCurrentText(self.config["model_name"])
         self.add_info_row(form, "model", self.model_cb, "model")
 
@@ -365,6 +361,37 @@ class SettingsDialog(QDialog):
         self.logprob_sb.setSingleStep(0.1)
         self.logprob_sb.setValue(self.config.get("logprob_threshold", -1.0))
         self.add_info_row(form, "logprob_threshold", self.logprob_sb, "logprob")
+
+        self.compression_sb = QDoubleSpinBox()
+        self.compression_sb.setRange(0.0, 10.0)
+        self.compression_sb.setSingleStep(0.1)
+        self.compression_sb.setValue(self.config.get("compression_ratio_threshold", 2.4))
+        self.add_info_row(form, "compression_ratio_threshold", self.compression_sb, "compression")
+
+        self.condition_chk = QCheckBox(tr("enabled"))
+        self.condition_chk.setChecked(self.config.get("condition_on_previous_text", True))
+        self.add_info_row(form, "condition_on_previous_text", self.condition_chk, "always_on_top")
+
+        self.hallucination_sb = QDoubleSpinBox()
+        self.hallucination_sb.setRange(0.0, 10.0)
+        self.hallucination_sb.setSingleStep(0.1)
+        self.hallucination_sb.setValue(self.config.get("hallucination_silence_threshold", 2.0))
+        self.add_info_row(form, "hallucination_silence_threshold", self.hallucination_sb, "hallucination")
+
+        self.repetition_sb = QDoubleSpinBox()
+        self.repetition_sb.setRange(1.0, 10.0)
+        self.repetition_sb.setSingleStep(0.1)
+        self.repetition_sb.setValue(self.config.get("repetition_penalty", 1.0))
+        self.add_info_row(form, "repetition_penalty", self.repetition_sb, "repetition")
+
+        self.no_repeat_sb = QSpinBox()
+        self.no_repeat_sb.setRange(0, 10)
+        self.no_repeat_sb.setValue(self.config.get("no_repeat_ngram_size", 0))
+        self.add_info_row(form, "no_repeat_ngram_size", self.no_repeat_sb, "no_repeat")
+
+        self.smart_normalization_chk = QCheckBox(tr("enabled"))
+        self.smart_normalization_chk.setChecked(self.config.get("smart_normalization", False))
+        self.add_info_row(form, "smart_normalization", self.smart_normalization_chk, "smart_normalization")
 
         from PySide6.QtWidgets import QPlainTextEdit
         self.replacements_te = QPlainTextEdit()
@@ -483,6 +510,37 @@ class SettingsDialog(QDialog):
         self.remote_logprob_sb.setSingleStep(0.1)
         self.remote_logprob_sb.setValue(self.config.get("remote_logprob_threshold", -1.0))
         self.add_info_row(form, "logprob_threshold", self.remote_logprob_sb, "logprob")
+
+        self.remote_compression_sb = QDoubleSpinBox()
+        self.remote_compression_sb.setRange(0.0, 10.0)
+        self.remote_compression_sb.setSingleStep(0.1)
+        self.remote_compression_sb.setValue(self.config.get("remote_compression_ratio_threshold", 2.4))
+        self.add_info_row(form, "compression_ratio_threshold", self.remote_compression_sb, "compression")
+
+        self.remote_condition_chk = QCheckBox(tr("enabled"))
+        self.remote_condition_chk.setChecked(self.config.get("remote_condition_on_previous_text", True))
+        self.add_info_row(form, "condition_on_previous_text", self.remote_condition_chk, "always_on_top")
+
+        self.remote_hallucination_sb = QDoubleSpinBox()
+        self.remote_hallucination_sb.setRange(0.0, 10.0)
+        self.remote_hallucination_sb.setSingleStep(0.1)
+        self.remote_hallucination_sb.setValue(self.config.get("remote_hallucination_silence_threshold", 2.0))
+        self.add_info_row(form, "hallucination_silence_threshold", self.remote_hallucination_sb, "hallucination")
+
+        self.remote_repetition_sb = QDoubleSpinBox()
+        self.remote_repetition_sb.setRange(1.0, 10.0)
+        self.remote_repetition_sb.setSingleStep(0.1)
+        self.remote_repetition_sb.setValue(self.config.get("remote_repetition_penalty", 1.0))
+        self.add_info_row(form, "repetition_penalty", self.remote_repetition_sb, "repetition")
+
+        self.remote_no_repeat_sb = QSpinBox()
+        self.remote_no_repeat_sb.setRange(0, 10)
+        self.remote_no_repeat_sb.setValue(self.config.get("remote_no_repeat_ngram_size", 0))
+        self.add_info_row(form, "no_repeat_ngram_size", self.remote_no_repeat_sb, "no_repeat")
+
+        self.remote_smart_normalization_chk = QCheckBox(tr("enabled"))
+        self.remote_smart_normalization_chk.setChecked(self.config.get("remote_smart_normalization", False))
+        self.add_info_row(form, "smart_normalization", self.remote_smart_normalization_chk, "smart_normalization")
 
         from PySide6.QtWidgets import QPlainTextEdit
         self.remote_replacements_te = QPlainTextEdit()
@@ -656,13 +714,17 @@ class SettingsDialog(QDialog):
         self.config["add_newline"] = self.add_newline_chk.isChecked()
         self.config["pause_media_on_record"] = self.pause_media_chk.isChecked()
         self.config["smart_normalization"] = self.smart_normalization_chk.isChecked()
-        
         self.config["opacity"] = self.opacity_slider.value() / 100.0
         self.config["hotkey"] = self.hotkey_le.text().strip().lower()
         self.config["beam_size"] = self.beam_size_sb.value()
         self.config["temperature"] = self.temp_sb.value()
         self.config["no_speech_threshold"] = self.no_speech_sb.value()
         self.config["logprob_threshold"] = self.logprob_sb.value()
+        self.config["compression_ratio_threshold"] = self.compression_sb.value()
+        self.config["condition_on_previous_text"] = self.condition_chk.isChecked()
+        self.config["hallucination_silence_threshold"] = self.hallucination_sb.value()
+        self.config["repetition_penalty"] = self.repetition_sb.value()
+        self.config["no_repeat_ngram_size"] = self.no_repeat_sb.value()
         self.config["word_replacements"] = self.replacements_te.toPlainText()
 
         self.config["backspace_cleanup"] = self.cleanup_sb.value()
@@ -685,6 +747,12 @@ class SettingsDialog(QDialog):
         self.config["remote_initial_prompt"] = self.remote_prompt_le.text()
         self.config["remote_no_speech_threshold"] = self.remote_no_speech_sb.value()
         self.config["remote_logprob_threshold"] = self.remote_logprob_sb.value()
+        self.config["remote_compression_ratio_threshold"] = self.remote_compression_sb.value()
+        self.config["remote_condition_on_previous_text"] = self.remote_condition_chk.isChecked()
+        self.config["remote_hallucination_silence_threshold"] = self.remote_hallucination_sb.value()
+        self.config["remote_repetition_penalty"] = self.remote_repetition_sb.value()
+        self.config["remote_no_repeat_ngram_size"] = self.remote_no_repeat_sb.value()
+        self.config["remote_smart_normalization"] = self.remote_smart_normalization_chk.isChecked()
         self.config["remote_word_replacements"] = self.remote_replacements_te.toPlainText()
 
         save_config(self.config)

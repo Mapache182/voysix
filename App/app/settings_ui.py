@@ -280,6 +280,8 @@ class SettingsDialog(QDialog):
         self.add_newline_chk.setChecked(self.config.get("add_newline", False))
         self.add_info_row(form, "add_newline", self.add_newline_chk, "add_newline")
 
+        self.cleanup_sb = QSpinBox()
+        self.cleanup_sb.setRange(0, 10)
         self.cleanup_sb.setValue(self.config.get("backspace_cleanup", 0))
         self.add_info_row(form, "backspace_cleanup", self.cleanup_sb, "backspace_cleanup")
 

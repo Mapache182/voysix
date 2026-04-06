@@ -9,8 +9,9 @@ RUN apt-get update && apt-get install -y ffmpeg curl gnupg && \
 
 WORKDIR /app
 
-# Optimization: Create a folder for models to cache them
-RUN mkdir -p /root/.cache/whisper
+# Persistent data folder for models and Tailscale state
+RUN mkdir -p /data
+VOLUME /data
 
 COPY requirements.txt .
 

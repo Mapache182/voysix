@@ -20,13 +20,15 @@ else
     echo "--- [GPU] GPU not detected and GPU_ENABLED is not set. Using CPU. ---"
 fi
 
+echo "--- [0/3] Preparing Persistent Directories ---"
+mkdir -p /data/tailscale
+mkdir -p /data/models
+
 echo "--- [1/3] Starting Tailscale Daemon ---"
 
 # Запускаем демон в режиме userspace-networking.
-# Это позволяет Tailscale работать без флага --privileged и NET_ADMIN, 
-# что делает соединение намного стабильнее в Docker.
-# --socket=/tmp/tailscaled.sock явно задает путь к сокету для команд cli.
-tailscaled --tun=userspace-networking --socket=/tmp/tailscaled.sock &
+# Мы явно указываем путь к файлу состояния на нашем волюме /data.
+tailscaled --tun=userspace-networking --socket=/tmp/tailscaled.sock --state=/data/tailscale/tailscaled.state &
 
 # Даем демону время инициализироваться
 sleep 3

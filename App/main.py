@@ -355,6 +355,11 @@ class AppController(QObject):
                 prompt = self.config.get("remote_initial_prompt", "")
                 no_speech = self.config.get("remote_no_speech_threshold", 0.6)
                 logprob = self.config.get("remote_logprob_threshold", -1.0)
+                compression = self.config.get("compression_ratio_threshold", 2.4)
+                condition = self.config.get("condition_on_previous_text", True)
+                silence_thr = self.config.get("hallucination_silence_threshold", 2.0)
+                rep_pen = self.config.get("repetition_penalty", 1.0)
+                no_repeat_ngram = self.config.get("no_repeat_ngram_size", 0)
             else:
                 lang = self.config.get("language", "auto")
                 model = self.config.get("model_name", "base")
@@ -364,6 +369,11 @@ class AppController(QObject):
                 prompt = self.config.get("initial_prompt", "")
                 no_speech = self.config.get("no_speech_threshold", 0.6)
                 logprob = self.config.get("logprob_threshold", -1.0)
+                compression = self.config.get("compression_ratio_threshold", 2.4)
+                condition = self.config.get("condition_on_previous_text", True)
+                silence_thr = self.config.get("hallucination_silence_threshold", 2.0)
+                rep_pen = self.config.get("repetition_penalty", 1.0)
+                no_repeat_ngram = self.config.get("no_repeat_ngram_size", 0)
 
             text = transcriber.transcribe(
                 audio, 
@@ -375,6 +385,11 @@ class AppController(QObject):
                 initial_prompt=prompt,
                 no_speech_threshold=no_speech,
                 logprob_threshold=logprob,
+                compression_ratio_threshold=compression,
+                condition_on_previous_text=condition,
+                hallucination_silence_threshold=silence_thr,
+                repetition_penalty=rep_pen,
+                no_repeat_ngram_size=no_repeat_ngram,
                 cancellation_callback=lambda: self.abort_transcription
             )
             

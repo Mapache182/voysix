@@ -52,6 +52,11 @@ DEFAULT_CONFIG = {
     "remote_logprob_threshold": -1.0,
     "no_speech_threshold": 0.6,
     "logprob_threshold": -1.0,
+    "compression_ratio_threshold": 2.4,
+    "condition_on_previous_text": True,
+    "hallucination_silence_threshold": 2.0,
+    "repetition_penalty": 1.0,
+    "no_repeat_ngram_size": 0,
     "smart_normalization": False,
     "word_replacements": "мерч:merch\nвоисикс:Voysix",
     "remote_word_replacements": ""

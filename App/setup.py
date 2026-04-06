@@ -38,7 +38,7 @@ if sys.platform == "win32":
 
 setup(
     name="Voysix",
-    version="4.4.62",
+    version="4.4.63",
     description="Voysix Application (Speech-to-Text)",
     options={
         "build_exe": build_exe_options

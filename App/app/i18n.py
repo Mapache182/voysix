@@ -62,9 +62,17 @@ TRANSLATIONS = {
         "ts_reboot_required": "Restart Required",
         "ts_reboot_msg": "Tailscale has been installed. To ensure a stable connection and start the background service correctly, you MUST restart your computer now or later. Without a restart, Tailscale may not function properly.",
         "ts_restart_now": "Would you like to restart your computer now?",
+        "tab_general": "General",
+        "tab_local": "Local Whisper",
+        "tab_remote": "Remote Worker",
+        "processing_settings": "Processing Settings",
         "about": "About",
         "about_title": "About Voysix",
-        "about_text": "Voysix v{version}\n\nVoysix Team.\nVoice-to-text transcription with local Whisper model.\n\nKey features:\n- High-accuracy offline transcription\n- Minimal latency (faster-whisper)\n- Private and local processing"
+        "about_text": "Voysix v{version}\n\nVoysix Team.\nVoice-to-text transcription with local Whisper model.\n\nKey features:\n- High-accuracy offline transcription\n- Minimal latency (faster-whisper)\n- Private and local processing",
+        "word_replacements": "Word Replacements (find:replace):",
+        "smart_normalization": "Smart Normalization (Numbers/Dates):",
+        "no_speech_threshold": "No-Speech Threshold:",
+        "logprob_threshold": "Logprob Threshold:"
     },
     "ru": {
         "ready": "Готов",
@@ -129,9 +137,17 @@ TRANSLATIONS = {
         "ts_reboot_required": "Требуется перезагрузка",
         "ts_reboot_msg": "Tailscale был установлен. Для обеспечения стабильного соединения и корректного запуска фоновой службы необходимо ПЕРЕЗАГРУЗИТЬ компьютер. Без перезагрузки Tailscale может работать некорректно.",
         "ts_restart_now": "Желаете ли вы перезагрузить компьютер сейчас?",
+        "tab_general": "Основные",
+        "tab_local": "Локальный Whisper",
+        "tab_remote": "Удалённый воркер",
+        "processing_settings": "Настройки обработки",
         "about": "О программе",
         "about_title": "О программе Voysix",
-        "about_text": "Voysix v{version}\n\nКоманда Voysix.\nГолосовой ввод текста через модель Whisper.\n\nОсновные функции:\n- Высокая точность распознавания\n- Минимальная задержка (faster-whisper)\n- Локальная обработка (конфиденциально)\n- Работа поверх любых окон"
+        "about_text": "Voysix v{version}\n\nКоманда Voysix.\nГолосовой ввод текста через модель Whisper.\n\nОсновные функции:\n- Высокая точность распознавания\n- Минимальная задержка (faster-whisper)\n- Локальная обработка (конфиденциально)\n- Работа поверх любых окон",
+        "word_replacements": "Словарь автозамен (найти:заменить):",
+        "smart_normalization": "Умная нормализация (числа/даты):",
+        "no_speech_threshold": "Порог отсутствия речи:",
+        "logprob_threshold": "Порог логистич. вер-ти:"
     },
     "es": {
         "ready": "Listo",
@@ -192,6 +208,10 @@ TRANSLATIONS = {
         "ts_reboot_required": "Reinicio Requerido",
         "ts_reboot_msg": "Tailscale ha sido instalado. Para asegurar una conexión estable y que el servicio se inicie correctamente, DEBE reiniciar su computadora. Sin un reinicio, Tailscale podría no funcionar correctamente.",
         "ts_restart_now": "¿Desea reiniciar su computadora ahora?",
+        "tab_general": "General",
+        "tab_local": "Local Whisper",
+        "tab_remote": "Trabajador Remoto",
+        "processing_settings": "Ajustes de Procesamiento",
         "about": "Acerca de",
         "about_title": "Acerca de Voysix",
         "about_text": "Voysix v{version}\n\nVoysix.\nTranscripción de voz a texto con el modelo Whisper local.\n\nFunciones clave:\n- Transcripción de alta precisión\n- Baja latencia\n- Procesamiento local privado"
@@ -226,7 +246,11 @@ HELP_TEXT = {
         "idle_time": "<b>Idle Time:</b><br>Time in minutes of inactivity after which the model will be unloaded from RAM.",
         "pre_record": "<b>Pre-recording:</b><br>Amount of 'buffer' audio to capture before you click the button. Prevents cutting off the start of your phrase.",
         "pause_media": "<b>Pause Media:</b><br>Automatically pause media playback (YouTube, Spotify, etc.) when you start recording, and resume when you stop.",
-        "ts_authkey": "<b>Tailscale Auth Key:</b><br>Used to automatically join your Tailscale network. You can find it in your Tailscale Admin Console under 'Auth Keys'."
+        "ts_authkey": "<b>Tailscale Auth Key:</b><br>Used to automatically join your Tailscale network. You can find it in your Tailscale Admin Console under 'Auth Keys'.",
+        "word_replacements": "<b>Word Replacements:</b><br>List of search/replace pairs (one per line). Format: <i>find:replace</i>. Example: <i>колл:call</i>",
+        "smart_normalization": "<b>Smart Normalization:</b><br>Automatically formats numbers, dates, and units for better readability.",
+        "no_speech": "<b>No-Speech Threshold:</b><br>If the model's 'no_speech' probability is higher than this, the segment is ignored. Default is 0.6.",
+        "logprob": "<b>Logprob Threshold:</b><br>Minimum average log-probability for a segment. If lower, the segment is considered silence/noise."
     },
     "ru": {
         "model": "<b>Модель Whisper:</b><br>'tiny' — самая быстрая, 'large' — самая точная. 'base' рекомендуется для большинства.",
@@ -255,7 +279,11 @@ HELP_TEXT = {
         "idle_time": "<b>Время простоя:</b><br>Время в минутах, после которого модель будет выгружена из оперативной памяти.",
         "pre_record": "<b>Дозапись:</b><br>Количество 'буферного' аудио, которое захватывается ДО нажатия кнопки. Помогает не обрезать начало фразы.",
         "pause_media": "<b>Пауза воспроизведения:</b><br>Автоматически останавливает видео или музыку (YouTube, Spotify и др.) при начале записи и возобновляет по завершении.",
-        "ts_authkey": "<b>Ключ Tailscale:</b><br>Используется для автоматического входа в вашу сеть Tailscale. Его можно создать в панели управления Tailscale (раздел Auth Keys)."
+        "ts_authkey": "<b>Ключ Tailscale:</b><br>Используется для автоматического входа в вашу сеть Tailscale. Его можно создать в панели управления Tailscale (раздел Auth Keys).",
+        "word_replacements": "<b>Словарь автозамен:</b><br>Список пар 'поиск:замена' (одна на строку). Пример: <i>колл:call</i>. Исправляет ошибки нейросети на лету.",
+        "smart_normalization": "<b>Умная нормализация:</b><br>Автоматически форматирует числа, даты и время для лучшей читаемости.",
+        "no_speech": "<b>Порог тишины:</b><br>Если вероятность 'отсутствия речи' выше этого значения, сегмент будет пропущен. Помогает убрать фоновый шум.",
+        "logprob": "<b>Порог вероятности:</b><br>Минимальная уверенность модели в тексте. Если ниже — текст считается галлюцинацией."
     },
     "es": {
         "model": "<b>Modelo Whisper:</b><br>'tiny' es el más rápido, 'large' el más preciso. 'base' se recomienda para la mayoría.",

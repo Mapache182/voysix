@@ -327,7 +327,8 @@ class WorkerClient:
         except:
             return None
 
-    def transcribe(self, audio_np, language="auto", beam_size=5, temperature=0.0, initial_prompt=None):
+    def transcribe(self, audio_np, model_name="base", engine="openai-whisper", language="auto", beam_size=5, temperature=0.0, initial_prompt=None,
+                  no_speech_threshold=0.6, logprob_threshold=-1.0):
         if not self.base_url:
             return "Worker not connected."
 
@@ -335,10 +336,14 @@ class WorkerClient:
             # 🔹 Prepare data for worker config if needed (e.g., language, model)
             # Worker currently has /config endpoint. We should probably update it before transcribing.
             worker_cfg = {
+                "model": model_name,
+                "engine": engine,
                 "language": language,
                 "beam_size": beam_size,
                 "temperature": temperature,
-                "initial_prompt": initial_prompt
+                "initial_prompt": initial_prompt,
+                "no_speech_threshold": no_speech_threshold,
+                "logprob_threshold": logprob_threshold
             }
             headers = self._get_headers()
             requests.post(f"{self.base_url}/config", json=worker_cfg, headers=headers, timeout=2)
@@ -357,10 +362,12 @@ class WorkerClient:
 
             # 🔹 Sending to /transcribe
             files = {"file": ("audio.wav", wav_buf, "audio/wav")}
-            resp = requests.post(f"{self.base_url}/transcribe", files=files, headers=headers, timeout=30)
+            resp = requests.post(f"{self.base_url}/transcribe", files=files, headers=headers, timeout=120)
             if resp.status_code == 200:
                 return resp.json().get("text", "").strip()
             else:
                 return f"Worker error: {resp.text}"
+        except requests.exceptions.Timeout:
+             return "Remote transcription error: Connection timed out. The worker might be busy or model loading is taking too long."
         except Exception as e:
             return f"Remote transcription error: {e}"

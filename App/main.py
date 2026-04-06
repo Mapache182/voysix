@@ -42,7 +42,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.56"
+        self.version = "4.4.62"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:
@@ -126,7 +126,7 @@ class AppController(QObject):
         self.floating_ui.show_context_menu = self.show_floating_context_menu
         self.floating_ui.show_settings_callback = self.show_settings
         self.floating_ui.geometry_changed.connect(self.on_window_geometry_change)
-        self.status_changed.connect(self.floating_ui.set_status)
+        self.status_changed.connect(self.update_status) # Changed from set_status
         self.level_changed.connect(self.floating_ui.set_level)
         
         self.abort_transcription = False
@@ -141,6 +141,32 @@ class AppController(QObject):
         
         # Initial check
         QTimer.singleShot(2000, self._background_discovery)
+
+        self.ui_update_timer = QTimer(self)
+        self.ui_update_timer.timeout.connect(self._on_ui_update_timer)
+        self.recording_start_time = 0
+        self.transcription_start_time = 0
+
+    def _on_ui_update_timer(self):
+        if self.recorder.recording and self.recording_start_time > 0:
+            elapsed = time.time() - self.recording_start_time
+            self.floating_ui.set_durations(recording=elapsed)
+        
+        if self.is_processing and self.transcription_start_time > 0:
+            elapsed = time.time() - self.transcription_start_time
+            self.floating_ui.set_durations(transcription=elapsed)
+
+    @Slot(str)
+    def update_status(self, status):
+        self.floating_ui.set_status(status)
+        if status in ["recording", "processing"]:
+            if not self.ui_update_timer.isActive():
+                self.ui_update_timer.start(100)
+        elif status == "idle":
+             self.ui_update_timer.stop()
+        # "done" status doesn't stop the timer immediately to let final values settle or show for a bit
+        # But wait, "done" status lasts 2 seconds, then goes to "idle".
+        # So it's fine.
 
     def on_press(self):
         try:
@@ -167,6 +193,10 @@ class AppController(QObject):
                 if self.config.get("pause_media_on_record", False):
                     toggle_media_playback()
                 self.recorder.start(device=self.config["selected_mic"])
+                
+                self.recording_start_time = time.time()
+                self.transcription_start_time = 0
+                self.floating_ui.set_durations(recording=0.0, transcription=0.0) # Clear previous
             else:
                 # Check duration
                 duration = current_time - self.last_toggle_time
@@ -180,6 +210,10 @@ class AppController(QObject):
                 if self.config.get("pause_media_on_record", False):
                     toggle_media_playback()
                 audio = self.recorder.stop()
+                # final duration will be set by the timer or final check
+                final_dur = time.time() - self.recording_start_time
+                self.floating_ui.set_durations(recording=final_dur)
+                
                 if audio is not None and len(audio) > 0:
                     self.audio_queue.put(audio)
                     # Status logic is now handled in _queue_worker and on_press
@@ -206,6 +240,7 @@ class AppController(QObject):
                 if self.config.get("pause_media_on_record", False):
                     toggle_media_playback()
                 self.recorder.stop()
+                self.floating_ui.set_durations(recording=0.0, transcription=0.0)
                 self.status_changed.emit("idle")
             
             if self.is_processing:
@@ -261,6 +296,7 @@ class AppController(QObject):
                 self.is_processing = False
 
     def process_audio(self, audio):
+        self.transcription_start_time = time.time()
         try:
             print(f"Transcription started for {len(audio)/16000:.2f}s of audio...")
             self.abort_transcription = False # Reset flag at start
@@ -309,12 +345,36 @@ class AppController(QObject):
                         transcriber.load_model(self.config["model_name"], self.config.get("engine", "openai-whisper"))
                         self.status_changed.emit("processing")
 
+            # 🔹 Select appropriate parameters for local or remote mode
+            if self.config.get("remote_mode", False) and is_available:
+                lang = self.config.get("remote_language", "auto")
+                model = self.config.get("remote_model_name", "base")
+                engine = self.config.get("remote_engine", "openai-whisper")
+                beam = self.config.get("remote_beam_size", 5)
+                temp = self.config.get("remote_temperature", 0.0)
+                prompt = self.config.get("remote_initial_prompt", "")
+                no_speech = self.config.get("remote_no_speech_threshold", 0.6)
+                logprob = self.config.get("remote_logprob_threshold", -1.0)
+            else:
+                lang = self.config.get("language", "auto")
+                model = self.config.get("model_name", "base")
+                engine = self.config.get("engine", "openai-whisper")
+                beam = self.config.get("beam_size", 5)
+                temp = self.config.get("temperature", 0.0)
+                prompt = self.config.get("initial_prompt", "")
+                no_speech = self.config.get("no_speech_threshold", 0.6)
+                logprob = self.config.get("logprob_threshold", -1.0)
+
             text = transcriber.transcribe(
                 audio, 
-                language=self.config.get("language", "auto"),
-                beam_size=self.config.get("beam_size", 5),
-                temperature=self.config.get("temperature", 0.0),
-                initial_prompt=self.config.get("initial_prompt", ""),
+                model_name=model,
+                engine=engine,
+                language=lang,
+                beam_size=beam,
+                temperature=temp,
+                initial_prompt=prompt,
+                no_speech_threshold=no_speech,
+                logprob_threshold=logprob,
                 cancellation_callback=lambda: self.abort_transcription
             )
             
@@ -322,8 +382,21 @@ class AppController(QObject):
                 print("Transcription cancelled, skipping output.")
                 self.status_changed.emit("idle")
                 return
+            
+            # 🔹 Post-processing: Replacements and Normalization
+            from app.utils import apply_replacements, apply_smart_normalization
+            
+            # Select replacements dictionary
+            repl_str = self.config.get("remote_word_replacements", "") if self.config.get("remote_mode", False) and is_available else self.config.get("word_replacements", "")
+            
+            text = apply_replacements(text, repl_str)
+            if self.config.get("smart_normalization", False):
+                text = apply_smart_normalization(text)
                 
             print(f"Transcription finished: '{text}'")
+            trans_dur = time.time() - self.transcription_start_time
+            self.floating_ui.set_durations(transcription=trans_dur)
+            self.transcription_start_time = 0
             self.status_changed.emit("done")
             output_transcription(
                 text, 

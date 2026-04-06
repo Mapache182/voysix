@@ -27,6 +27,9 @@ class FloatingStatus(QWidget):
         self.ui_design = "waveform"
         self.level_history = [0.0] * 50
         
+        self.recording_duration = 0.0
+        self.transcription_duration = 0.0
+        
         self.status_labels = {
             "idle": tr("ready"),
             "loading": tr("loading"),
@@ -92,6 +95,13 @@ class FloatingStatus(QWidget):
         self.level = level
         self.level_history.pop(0)
         self.level_history.append(level)
+        self.update()
+
+    def set_durations(self, recording=None, transcription=None):
+        if recording is not None:
+            self.recording_duration = recording
+        if transcription is not None:
+            self.transcription_duration = transcription
         self.update()
 
     def bring_to_front(self):
@@ -246,6 +256,29 @@ class FloatingStatus(QWidget):
                         meter_h,
                         2, 2
                     )
+
+        # Draw Timers (Audio duration and Transcription duration)
+        # Small font at the right
+        painter.setPen(QColor(255, 255, 255, 180))
+        font = painter.font()
+        font.setPointSize(7)
+        font.setBold(False)
+        painter.setFont(font)
+        
+        # Audio Duration (Top Right)
+        if self.recording_duration > 0:
+            audio_text = f"{self.recording_duration:.1f}s"
+            # Draw at top right
+            rect = QRect(0, 4, self.width() - 35, 12) # 35 is padding for settings button
+            painter.drawText(rect, Qt.AlignRight | Qt.AlignVCenter, audio_text)
+
+        # Transcription Duration (Bottom Right)
+        if self.transcription_duration > 0:
+            # Only show if not recording or if we just finished
+            if self.status != "recording":
+                trans_text = f"⚡ {self.transcription_duration:.1f}s"
+                rect = QRect(0, self.height() - 16, self.width() - 35, 12)
+                painter.drawText(rect, Qt.AlignRight | Qt.AlignVCenter, trans_text)
 
 
 

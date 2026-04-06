@@ -81,3 +81,38 @@ def output_transcription(text, mode="type", delay=0.7, cleanup=0, add_space=Fals
             
         native_paste()
         print(f"Text pasted: {text[:20]}...")
+
+def apply_replacements(text, replacements_str):
+    if not text or not replacements_str:
+        return text
+    
+    import re
+    lines = replacements_str.split('\n')
+    for line in lines:
+        if ':' in line:
+            try:
+                find, replace = line.split(':', 1)
+                find = find.strip()
+                replace = replace.strip()
+                if find:
+                    # Use regex with word boundaries for better accuracy
+                    pattern = re.compile(rf'\b{re.escape(find)}\b', re.IGNORECASE)
+                    text = pattern.sub(replace, text)
+            except:
+                continue
+    return text
+
+def apply_smart_normalization(text):
+    if not text:
+        return text
+    
+    import re
+    # 1. Fix spacing around punctuation if model messed up
+    text = re.sub(r'\s+([,.!?])', r'\1', text)
+    
+    # 2. Capitalize sentences
+    def capitalize(match):
+        return match.group(1) + match.group(2).upper()
+    text = re.sub(r'(^|[.!?]\s+)([a-zа-я])', capitalize, text)
+
+    return text

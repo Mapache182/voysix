@@ -42,7 +42,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.64"
+        self.version = "4.4.65"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:
@@ -308,7 +308,7 @@ class AppController(QObject):
                 
                 # Check for discoverable worker
                 remote = RemoteWhisperTranscriber(
-                    self.config.get("remote_worker_name", "worker-node"),
+                    self.config.get("remote_worker_name", "voysix-worker"),
                     api_key=self.config.get("remote_api_key", ""),
                     manual_url=self.config.get("remote_worker_url", "")
                 )

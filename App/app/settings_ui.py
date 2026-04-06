@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
-    QCheckBox, QPushButton, QDoubleSpinBox, QFormLayout, QSlider, QSpinBox, QLineEdit, QMessageBox
+    QCheckBox, QPushButton, QDoubleSpinBox, QFormLayout, QSlider, QSpinBox, QLineEdit, QMessageBox,
+    QTabWidget, QWidget, QScrollArea
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread
 from PySide6.QtGui import QKeyEvent, QMouseEvent, QIcon
@@ -135,278 +136,370 @@ class SettingsDialog(QDialog):
         icon_path = get_resource_path(os.path.join("assets", "icon.png"))
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
-        self.resize(350, 450)
+        self.setMinimumSize(420, 550)
         
-        self.help_text = {
-            "model": "<b>Whisper Model:</b><br>'tiny' is fastest, 'large' is most accurate. 'base' is recommended for most users.",
-            "mic": "<b>Microphone:</b><br>Select the audio device to record from. 'Default' follows your Windows settings.",
-            "lang": "<b>Language:</b><br>Forcing a language (e.g., Russian) improves accuracy and reduces translation errors.",
-            "mode": "<b>Output Mode:</b><br>'type' pastes text automatically. 'clipboard' just copies it. 'console' only shows logs.",
-            "delay": "<b>Paste Delay:</b><br>Wait time (seconds) before pasting. Increase if text pastes into the wrong window.",
-            "autostart": "<b>Autostart:</b><br>Automatically launch voysix when you log into Windows.",
-            "opacity": "<b>UI Opacity:</b><br>Changes how transparent the floating 'Ready' window is.",
-            "mic_vol": "<b>Mic Volume:</b><br>Synchronized with Windows System Microphone volume. Use this if your voice is too quiet.",
-            "beam": "<b>Beam Size:</b><br>Higher values (e.g., 5-10) explore more phrase variants. Improving grammar but slowing down processing.",
-            "temp": "<b>Temperature:</b><br>0.0 is strict and stable. Higher values add 'creativity' but might cause hallucinations.",
-            "prompt": "<b>Initial Prompt:</b><br>Provide context or common words (like names or tech terms) to guide the AI's vocabulary.",
-            "ts_authkey": "<b>Tailscale Auth Key:</b><br>Use this to automatically join the Tailscale network. Create it in the Tailscale admin console."
-        }
+        main_layout = QVBoxLayout(self)
         
-        layout = QVBoxLayout(self)
-        self.form = QFormLayout()
+        # --- TAB WIDGET ---
+        self.tabs = QTabWidget()
         
-        # Helper to add row with info button
-        def add_info_row(label_key, widget, help_key):
-            row_layout = QHBoxLayout()
-            row_layout.addWidget(widget)
-            
-            info_btn = QPushButton("ⓘ")
-            info_btn.setFixedSize(20, 20)
-            info_btn.setStyleSheet("""
-                QPushButton { 
-                    border: none; color: #0078d4; font-weight: bold; background: transparent; font-size: 14px;
-                }
-                QPushButton:hover { color: #005a9e; }
-            """)
-            info_btn.clicked.connect(lambda: QMessageBox.information(self, tr("info_title"), hlp(help_key)))
-            row_layout.addWidget(info_btn)
-            
-            self.form.addRow(tr(label_key), row_layout)
+        self.init_general_tab()
+        self.init_local_tab()
+        self.init_remote_tab()
+        
+        main_layout.addWidget(self.tabs)
 
-        self.model_cb = QComboBox()
-        self.model_cb.addItems(["tiny", "base", "small", "medium", "large"])
-        self.model_cb.setCurrentText(self.config["model_name"])
-        add_info_row("model", self.model_cb, "model")
+        # --- BOTTOM BUTTONS ---
+        buttons = QHBoxLayout()
+        save_btn = QPushButton(tr("save"))
+        save_btn.setStyleSheet("font-weight: bold; padding: 6px 12px;")
+        save_btn.clicked.connect(self.save)
+        cancel_btn = QPushButton(tr("cancel"))
+        cancel_btn.setStyleSheet("padding: 6px 12px;")
+        cancel_btn.clicked.connect(self.cancel)
+        buttons.addStretch()
+        buttons.addWidget(save_btn)
+        buttons.addWidget(cancel_btn)
+        main_layout.addLayout(buttons)
 
-        # Engine selection
-        self.engine_cb = QComboBox()
-        self.engine_cb.addItem("OpenAI Whisper", "openai-whisper")
-        self.engine_cb.addItem("Faster Whisper", "faster-whisper")
-        idx = self.engine_cb.findData(self.config.get("engine", "openai-whisper"))
-        self.engine_cb.setCurrentIndex(idx if idx >= 0 else 0)
-        add_info_row("engine", self.engine_cb, "engine")
+        # Timers & Tester
+        self.vol_timer = QTimer(self)
+        self.vol_timer.timeout.connect(self._sync_volume_from_system)
+        self.vol_timer.start(500)
+
+        self.status_timer = QTimer(self)
+        self.status_timer.timeout.connect(self._test_worker)
         
-        # GPU Checkbox
-        self.use_gpu_chk = QCheckBox(tr("enabled"))
-        self.use_gpu_chk.setChecked(self.config.get("use_gpu", False))
-        self.use_gpu_chk.stateChanged.connect(self._on_use_gpu_toggled)
-        self.form.addRow("Use GPU (NVIDIA)", self.use_gpu_chk)
+        self.tester = None
+
+        if self.remote_mode_chk.isChecked():
+            self._toggle_status_timer(Qt.Checked)
+            QTimer.singleShot(1000, self._test_worker)
+
+    def add_info_row(self, form, label_key, widget, help_key):
+        row_layout = QHBoxLayout()
+        row_layout.addWidget(widget)
         
-        # Mic Selection
+        info_btn = QPushButton("ⓘ")
+        info_btn.setFixedSize(20, 20)
+        info_btn.setStyleSheet("""
+            QPushButton { 
+                border: none; color: #0078d4; font-weight: bold; background: transparent; font-size: 14px;
+            }
+            QPushButton:hover { color: #005a9e; }
+        """)
+        info_btn.clicked.connect(lambda: QMessageBox.information(self, tr("info_title"), hlp(help_key)))
+        row_layout.addWidget(info_btn)
+        
+        form.addRow(tr(label_key), row_layout)
+
+    def init_general_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        form = QFormLayout()
+
+        # Interface Language
+        self.ui_lang_cb = QComboBox()
+        ui_langs = {"en": "English", "ru": "Русский", "es": "Español"}
+        for code, name in ui_langs.items():
+            self.ui_lang_cb.addItem(name, code)
+        self.ui_lang_cb.setCurrentIndex(max(0, self.ui_lang_cb.findData(self.config.get("ui_language", "en"))))
+        self.add_info_row(form, "ui_lang", self.ui_lang_cb, "ui_lang")
+
+        # Design
+        self.design_cb = QComboBox()
+        self.design_cb.addItem(tr("design_classic"), "classic")
+        self.design_cb.addItem(tr("design_waveform"), "waveform")
+        self.design_cb.setCurrentIndex(max(0, self.design_cb.findData(self.config.get("ui_design", "classic"))))
+        self.add_info_row(form, "ui_design", self.design_cb, "ui_design")
+
+        # Mic
         self.mic_cb = QComboBox()
         self.mic_cb.addItem(tr("default_mic"), None)
         devices = sd.query_devices()
         for i, dev in enumerate(devices):
             if dev['max_input_channels'] > 0:
                 self.mic_cb.addItem(f"{i}: {dev['name']}", i)
-        
-        if self.config["selected_mic"] is None:
-            self.mic_cb.setCurrentIndex(0)
-        else:
-            idx = self.mic_cb.findData(self.config["selected_mic"])
-            self.mic_cb.setCurrentIndex(idx if idx >= 0 else 0)
-        add_info_row("microphone", self.mic_cb, "mic")
-        
-        # Transcription Language Selection
-        self.lang_cb = QComboBox()
-        langs = {"auto": "Auto Detect", "en": "English", "ru": "Russian", "de": "German", "fr": "French", "es": "Spanish"}
-        for code, name in langs.items():
-            self.lang_cb.addItem(name, code)
-        self.lang_cb.setCurrentIndex(max(0, self.lang_cb.findData(self.config.get("language", "auto"))))
-        add_info_row("language", self.lang_cb, "lang")
+        idx = self.mic_cb.findData(self.config["selected_mic"])
+        self.mic_cb.setCurrentIndex(idx if idx >= 0 else 0)
+        self.add_info_row(form, "microphone", self.mic_cb, "mic")
 
-        # Interface Language Selection
-        self.ui_lang_cb = QComboBox()
-        ui_langs = {"en": "English", "ru": "Русский", "es": "Español"}
-        for code, name in ui_langs.items():
-            self.ui_lang_cb.addItem(name, code)
-        self.ui_lang_cb.setCurrentIndex(max(0, self.ui_lang_cb.findData(self.config.get("ui_language", "en"))))
-        add_info_row("ui_lang", self.ui_lang_cb, "ui_lang")
-        
-        # Output Mode
-        self.output_cb = QComboBox()
-        self.output_cb.addItems(["type", "clipboard", "console"])
-        self.output_cb.setCurrentText(self.config["output_mode"])
-        add_info_row("output_mode", self.output_cb, "mode")
-        
-        # Paste Delay
-        self.delay_sb = QDoubleSpinBox()
-        self.delay_sb.setRange(0.1, 5.0)
-        self.delay_sb.setValue(self.config["paste_delay"])
-        add_info_row("paste_delay", self.delay_sb, "delay")
-        
-        # Always on top
-        self.always_on_top_chk = QCheckBox(tr("enabled"))
-        self.always_on_top_chk.setChecked(self.config.get("always_on_top", True))
-        add_info_row("always_on_top", self.always_on_top_chk, "always_on_top")
-        
-        # UI Design
-        self.design_cb = QComboBox()
-        self.design_cb.addItem(tr("design_classic"), "classic")
-        self.design_cb.addItem(tr("design_waveform"), "waveform")
-        self.design_cb.setCurrentIndex(max(0, self.design_cb.findData(self.config.get("ui_design", "classic"))))
-        add_info_row("ui_design", self.design_cb, "ui_design")
-
-        # Autostart
-        self.autostart_chk = QCheckBox(tr("enabled"))
-        actual_autostart = is_autostart_enabled()
-        self.autostart_chk.setChecked(actual_autostart)
-        # Ensure config is in sync with reality
-        self.config["autostart"] = actual_autostart
-        add_info_row("autostart", self.autostart_chk, "autostart")
-        
-        # Opacity
-        self.opacity_slider = QSlider(Qt.Horizontal)
-        self.opacity_slider.setRange(20, 100)
-        self.opacity_slider.setValue(int(self.original_opacity * 100))
-        self.opacity_slider.valueChanged.connect(self._on_opacity_slider_changed)
-        add_info_row("ui_opacity", self.opacity_slider, "opacity")
-        
-
-        
         # Mic Volume
         self.mic_vol_slider = QSlider(Qt.Horizontal)
         self.mic_vol_slider.setRange(0, 100)
         self.mic_vol_slider.setValue(get_mic_volume())
         self.mic_vol_slider.valueChanged.connect(self._on_mic_vol_changed)
-        add_info_row("mic_volume", self.mic_vol_slider, "mic_vol")
-
-        # Add Space
-        self.add_space_chk = QCheckBox(tr("enabled"))
-        self.add_space_chk.setChecked(self.config.get("add_space", False))
-        add_info_row("add_space", self.add_space_chk, "add_space")
-
-        # Add Newline
-        self.add_newline_chk = QCheckBox(tr("enabled"))
-        self.add_newline_chk.setChecked(self.config.get("add_newline", False))
-        add_info_row("add_newline", self.add_newline_chk, "add_newline")
-        
-        # Pause Media
-        self.pause_media_chk = QCheckBox(tr("enabled"))
-        self.pause_media_chk.setChecked(self.config.get("pause_media_on_record", False))
-        add_info_row("pause_media", self.pause_media_chk, "pause_media")
-
-        # Start timer to sync system volume to slider (polling)
-        self.vol_timer = QTimer(self)
-        self.vol_timer.timeout.connect(self._sync_volume_from_system)
-        self.vol_timer.start(500) # Check every 0.5s
+        self.add_info_row(form, "mic_volume", self.mic_vol_slider, "mic_vol")
 
         # Hotkey
         self.hotkey_le = HotkeyLineEdit(self.config.get("hotkey", "middle_click"))
-        add_info_row("hotkey", self.hotkey_le, "hotkey")
-        
-        self.form.addRow(QLabel(f"<br><b>{tr('advanced_tuning')}</b>"), QLabel(""))
-        
-        # Beam Size
-        self.beam_size_sb = QSpinBox()
-        self.beam_size_sb.setRange(1, 10)
-        self.beam_size_sb.setValue(self.config.get("beam_size", 5))
-        add_info_row("beam_size", self.beam_size_sb, "beam")
-        
-        # Temperature
-        self.temp_sb = QDoubleSpinBox()
-        self.temp_sb.setRange(0.0, 1.0)
-        self.temp_sb.setSingleStep(0.1)
-        self.temp_sb.setValue(self.config.get("temperature", 0.0))
-        add_info_row("temperature", self.temp_sb, "temp")
-        
-        # Backspace Cleanup
-        self.cleanup_sb = QSpinBox()
-        self.cleanup_sb.setRange(0, 10)
-        self.cleanup_sb.setValue(self.config.get("backspace_cleanup", 0))
-        add_info_row("backspace_cleanup", self.cleanup_sb, "backspace_cleanup")
+        self.add_info_row(form, "hotkey", self.hotkey_le, "hotkey")
 
-        # Unload model when idle
-        self.unload_idle_chk = QCheckBox(tr("enabled"))
-        self.unload_idle_chk.setChecked(self.config.get("unload_idle", True))
-        add_info_row("unload_idle", self.unload_idle_chk, "unload_idle")
+        # Behavior
+        self.autostart_chk = QCheckBox(tr("enabled"))
+        self.autostart_chk.setChecked(is_autostart_enabled())
+        self.add_info_row(form, "autostart", self.autostart_chk, "autostart")
 
-        # Idle time
-        self.idle_time_sb = QSpinBox()
-        self.idle_time_sb.setRange(1, 60)
-        self.idle_time_sb.setValue(self.config.get("idle_time_minutes", 5))
-        add_info_row("idle_time", self.idle_time_sb, "idle_time")
+        self.always_on_top_chk = QCheckBox(tr("enabled"))
+        self.always_on_top_chk.setChecked(self.config.get("always_on_top", True))
+        self.add_info_row(form, "always_on_top", self.always_on_top_chk, "always_on_top")
 
-        # Pre-recording
+        self.opacity_slider = QSlider(Qt.Horizontal)
+        self.opacity_slider.setRange(20, 100)
+        self.opacity_slider.setValue(int(self.original_opacity * 100))
+        self.opacity_slider.valueChanged.connect(self._on_opacity_slider_changed)
+        self.add_info_row(form, "ui_opacity", self.opacity_slider, "opacity")
+
+        self.pause_media_chk = QCheckBox(tr("enabled"))
+        self.pause_media_chk.setChecked(self.config.get("pause_media_on_record", False))
+        self.add_info_row(form, "pause_media", self.pause_media_chk, "pause_media")
+
         self.pre_record_sb = QDoubleSpinBox()
         self.pre_record_sb.setRange(0.0, 5.0)
         self.pre_record_sb.setSingleStep(0.5)
         self.pre_record_sb.setValue(self.config.get("pre_record_seconds", 0.0))
-        add_info_row("pre_record", self.pre_record_sb, "pre_record")
+        self.add_info_row(form, "pre_record", self.pre_record_sb, "pre_record")
+
+        # Output group
+        form.addRow(QLabel(f"<br><b>{tr('output_mode')}</b>"), QLabel(""))
+        self.output_cb = QComboBox()
+        self.output_cb.addItems(["type", "clipboard", "console"])
+        self.output_cb.setCurrentText(self.config["output_mode"])
+        self.add_info_row(form, "output_mode", self.output_cb, "mode")
+
+        self.delay_sb = QDoubleSpinBox()
+        self.delay_sb.setRange(0.1, 5.0)
+        self.delay_sb.setValue(self.config["paste_delay"])
+        self.add_info_row(form, "paste_delay", self.delay_sb, "delay")
+
+        self.add_space_chk = QCheckBox(tr("enabled"))
+        self.add_space_chk.setChecked(self.config.get("add_space", False))
+        self.add_info_row(form, "add_space", self.add_space_chk, "add_space")
+
+        self.add_newline_chk = QCheckBox(tr("enabled"))
+        self.add_newline_chk.setChecked(self.config.get("add_newline", False))
+        self.add_info_row(form, "add_newline", self.add_newline_chk, "add_newline")
+
+        self.cleanup_sb.setValue(self.config.get("backspace_cleanup", 0))
+        self.add_info_row(form, "backspace_cleanup", self.cleanup_sb, "backspace_cleanup")
+
+        self.smart_normalization_chk = QCheckBox(tr("enabled"))
+        self.smart_normalization_chk.setChecked(self.config.get("smart_normalization", False))
+        self.add_info_row(form, "smart_normalization", self.smart_normalization_chk, "smart_normalization")
+
+        layout.addLayout(form)
+        layout.addStretch()
+        self.tabs.addTab(tab, tr("tab_general"))
+
+    def init_local_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        form = QFormLayout()
+
+        # Engine
+        self.engine_cb = QComboBox()
+        self.engine_cb.addItem("OpenAI Whisper", "openai-whisper")
+        self.engine_cb.addItem("Faster Whisper", "faster-whisper")
+        idx = self.engine_cb.findData(self.config.get("engine", "openai-whisper"))
+        self.engine_cb.setCurrentIndex(idx if idx >= 0 else 0)
+        self.add_info_row(form, "engine", self.engine_cb, "engine")
+
+        # Model
+        self.model_cb = QComboBox()
+        self.model_cb.addItems(["tiny", "base", "small", "medium", "large"])
+        self.model_cb.setCurrentText(self.config["model_name"])
+        self.add_info_row(form, "model", self.model_cb, "model")
+
+        # Transcribe Language
+        self.lang_cb = QComboBox()
+        langs = {"auto": "Auto Detect", "en": "English", "ru": "Russian", "de": "German", "fr": "French", "es": "Spanish"}
+        for code, name in langs.items():
+            self.lang_cb.addItem(name, code)
+        self.lang_cb.setCurrentIndex(max(0, self.lang_cb.findData(self.config.get("language", "auto"))))
+        self.add_info_row(form, "language", self.lang_cb, "lang")
+
+        # GPU
+        self.use_gpu_chk = QCheckBox(tr("enabled"))
+        self.use_gpu_chk.setChecked(self.config.get("use_gpu", False))
+        self.use_gpu_chk.stateChanged.connect(self._on_use_gpu_toggled)
+        form.addRow("Use GPU (NVIDIA):", self.use_gpu_chk)
+
+        # Advanced
+        form.addRow(QLabel(f"<br><b>{tr('processing_settings')}</b>"), QLabel(""))
         
-        # Initial Prompt
+        self.beam_size_sb = QSpinBox()
+        self.beam_size_sb.setRange(1, 10)
+        self.beam_size_sb.setValue(self.config.get("beam_size", 5))
+        self.add_info_row(form, "beam_size", self.beam_size_sb, "beam")
+
+        self.temp_sb = QDoubleSpinBox()
+        self.temp_sb.setRange(0.0, 1.0)
+        self.temp_sb.setSingleStep(0.1)
+        self.temp_sb.setValue(self.config.get("temperature", 0.0))
+        self.add_info_row(form, "temperature", self.temp_sb, "temp")
+
         self.prompt_le = QLineEdit()
         self.prompt_le.setText(self.config.get("initial_prompt", ""))
-        self.prompt_le.setPlaceholderText("Enter context/vocabulary...")
-        add_info_row("initial_prompt", self.prompt_le, "prompt")
-        
-        # --- Remote Worker Section ---
-        self.form.addRow(QLabel(f"<br><b>{tr('remote_worker')}</b>"), QLabel(""))
-        
+        self.prompt_le.setPlaceholderText("Context words...")
+        self.add_info_row(form, "initial_prompt", self.prompt_le, "prompt")
+
+        self.unload_idle_chk = QCheckBox(tr("enabled"))
+        self.unload_idle_chk.setChecked(self.config.get("unload_idle", True))
+        self.add_info_row(form, "unload_idle", self.unload_idle_chk, "unload_idle")
+
+        self.idle_time_sb = QSpinBox()
+        self.idle_time_sb.setRange(1, 60)
+        self.idle_time_sb.setValue(self.config.get("idle_time_minutes", 5))
+        self.add_info_row(form, "idle_time", self.idle_time_sb, "idle_time")
+
+        self.no_speech_sb = QDoubleSpinBox()
+        self.no_speech_sb.setRange(0.0, 1.0)
+        self.no_speech_sb.setSingleStep(0.05)
+        self.no_speech_sb.setValue(self.config.get("no_speech_threshold", 0.6))
+        self.add_info_row(form, "no_speech_threshold", self.no_speech_sb, "no_speech")
+
+        self.logprob_sb = QDoubleSpinBox()
+        self.logprob_sb.setRange(-10.0, 1.0)
+        self.logprob_sb.setSingleStep(0.1)
+        self.logprob_sb.setValue(self.config.get("logprob_threshold", -1.0))
+        self.add_info_row(form, "logprob_threshold", self.logprob_sb, "logprob")
+
+        from PySide6.QtWidgets import QPlainTextEdit
+        self.replacements_te = QPlainTextEdit()
+        self.replacements_te.setPlaceholderText("word:replacement\nмерч:merch")
+        self.replacements_te.setPlainText(self.config.get("word_replacements", ""))
+        self.replacements_te.setMaximumHeight(80)
+        self.add_info_row(form, "word_replacements", self.replacements_te, "word_replacements")
+
+        layout.addLayout(form)
+        layout.addStretch()
+        self.tabs.addTab(tab, tr("tab_local"))
+
+    def init_remote_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        form = QFormLayout()
+
         self.remote_mode_chk = QCheckBox(tr("enabled"))
         self.remote_mode_chk.setChecked(self.config.get("remote_mode", False))
-        add_info_row("remote_worker", self.remote_mode_chk, "remote_worker")
-        
+        self.remote_mode_chk.stateChanged.connect(self._toggle_status_timer)
+        self.add_info_row(form, "remote_worker", self.remote_mode_chk, "remote_worker")
+
         self.remote_node_le = QLineEdit()
         self.remote_node_le.setText(self.config.get("remote_worker_name", ""))
         self.remote_node_le.setPlaceholderText("tailscale-node-name")
-        add_info_row("remote_node", self.remote_node_le, "remote_node")
+        self.add_info_row(form, "remote_node", self.remote_node_le, "remote_node")
 
         self.remote_key_le = QLineEdit()
         self.remote_key_le.setEchoMode(QLineEdit.Password)
         self.remote_key_le.setText(self.config.get("remote_api_key", ""))
-        add_info_row("worker_api_key", self.remote_key_le, "remote_api_key")
+        self.add_info_row(form, "worker_api_key", self.remote_key_le, "remote_api_key")
 
         self.manual_url_le = QLineEdit()
         self.manual_url_le.setText(self.config.get("remote_worker_url", ""))
         self.manual_url_le.setPlaceholderText("http://100.x.y.z:8000")
-        add_info_row("manual_url", self.manual_url_le, "manual_url_help")
+        self.add_info_row(form, "manual_url", self.manual_url_le, "manual_url_help")
 
         self.ts_key_le = QLineEdit()
         self.ts_key_le.setEchoMode(QLineEdit.Password)
         self.ts_key_le.setText(self.config.get("tailscale_auth_key", ""))
         self.ts_key_le.setPlaceholderText("tskey-auth-...")
-        add_info_row("ts_authkey", self.ts_key_le, "ts_authkey")
+        self.add_info_row(form, "ts_authkey", self.ts_key_le, "ts_authkey")
+
+        # Status labels
+        form.addRow(QLabel(f"<br><b>{tr('worker_status')}</b>"), QLabel(""))
         
-        self.test_worker_btn = QPushButton(tr("test_connection"))
-        self.test_worker_btn.clicked.connect(self._test_worker)
         self.worker_status_lbl = QLabel(tr("status_offline"))
         self.worker_status_lbl.setStyleSheet("color: gray;")
-        
-        status_layout = QHBoxLayout()
-        status_layout.addWidget(self.test_worker_btn)
-        status_layout.addWidget(self.worker_status_lbl)
-        self.form.addRow(tr("worker_status"), status_layout)
+        form.addRow(tr("worker_status"), self.worker_status_lbl)
 
-        # 🔹 Tailscale Status Label & Fix Button
         self.ts_status_lbl = QLabel("---")
         self.ts_status_lbl.setStyleSheet("color: gray;")
         
         self.ts_fix_btn = QPushButton(tr("ts_fix_btn"))
-        self.ts_fix_btn.setToolTip(tr("ts_fix_msg"))
-        self.ts_fix_btn.setFixedWidth(80)
         self.ts_fix_btn.setVisible(False)
         self.ts_fix_btn.clicked.connect(self._fix_tailscale)
         
-        ts_status_layout = QHBoxLayout()
-        ts_status_layout.addWidget(self.ts_status_lbl)
-        ts_status_layout.addWidget(self.ts_fix_btn)
-        ts_status_layout.addStretch()
-        
-        self.form.addRow(tr("ts_status"), ts_status_layout)
-        
-        layout.addLayout(self.form)
-        
-        self.tester = None
+        ts_layout = QHBoxLayout()
+        ts_layout.addWidget(self.ts_status_lbl)
+        ts_layout.addWidget(self.ts_fix_btn)
+        ts_layout.addStretch()
+        form.addRow(tr("ts_status"), ts_layout)
 
-        buttons = QHBoxLayout()
-        save_btn = QPushButton(tr("save"))
-        save_btn.clicked.connect(self.save)
-        cancel_btn = QPushButton(tr("cancel"))
-        cancel_btn.clicked.connect(self.cancel)
-        buttons.addWidget(save_btn)
-        buttons.addWidget(cancel_btn)
-        layout.addLayout(buttons)
+        # 🔹 Remote-specific transcription settings
+        form.addRow(QLabel(f"<br><b>{tr('processing_settings')}</b>"), QLabel(""))
+
+        # Remote Engine
+        self.remote_engine_cb = QComboBox()
+        self.remote_engine_cb.addItem("OpenAI Whisper", "openai-whisper")
+        self.remote_engine_cb.addItem("Faster Whisper", "faster-whisper")
+        idx = self.remote_engine_cb.findData(self.config.get("remote_engine", "openai-whisper"))
+        self.remote_engine_cb.setCurrentIndex(idx if idx >= 0 else 0)
+        self.add_info_row(form, "engine", self.remote_engine_cb, "engine")
+
+        # Remote Model
+        self.remote_model_cb = QComboBox()
+        self.remote_model_cb.addItems(["tiny", "base", "small", "medium", "large", "distil-large-v3"])
+        self.remote_model_cb.setCurrentText(self.config.get("remote_model_name", "base"))
+        self.add_info_row(form, "model", self.remote_model_cb, "model")
+
+        # Remote Language
+        self.remote_lang_cb = QComboBox()
+        langs = {"auto": "Auto Detect", "en": "English", "ru": "Russian", "de": "German", "fr": "French", "es": "Spanish"}
+        for code, name in langs.items():
+            self.remote_lang_cb.addItem(name, code)
+        self.remote_lang_cb.setCurrentIndex(max(0, self.remote_lang_cb.findData(self.config.get("remote_language", "auto"))))
+        self.add_info_row(form, "language", self.remote_lang_cb, "lang")
+
+        # Remote Beam Size
+        self.remote_beam_size_sb = QSpinBox()
+        self.remote_beam_size_sb.setRange(1, 10)
+        self.remote_beam_size_sb.setValue(self.config.get("remote_beam_size", 5))
+        self.add_info_row(form, "beam_size", self.remote_beam_size_sb, "beam")
+
+        # Remote Temperature
+        self.remote_temp_sb = QDoubleSpinBox()
+        self.remote_temp_sb.setRange(0.0, 1.0)
+        self.remote_temp_sb.setSingleStep(0.1)
+        self.remote_temp_sb.setValue(self.config.get("remote_temperature", 0.0))
+        self.add_info_row(form, "temperature", self.remote_temp_sb, "temp")
+
+        self.remote_prompt_le = QLineEdit()
+        self.remote_prompt_le.setText(self.config.get("remote_initial_prompt", ""))
+        self.remote_prompt_le.setPlaceholderText("Context words...")
+        self.add_info_row(form, "initial_prompt", self.remote_prompt_le, "prompt")
+
+        # 🔹 Remote advanced
+        self.remote_no_speech_sb = QDoubleSpinBox()
+        self.remote_no_speech_sb.setRange(0.0, 1.0)
+        self.remote_no_speech_sb.setSingleStep(0.05)
+        self.remote_no_speech_sb.setValue(self.config.get("remote_no_speech_threshold", 0.6))
+        self.add_info_row(form, "no_speech_threshold", self.remote_no_speech_sb, "no_speech")
+
+        self.remote_logprob_sb = QDoubleSpinBox()
+        self.remote_logprob_sb.setRange(-10.0, 1.0)
+        self.remote_logprob_sb.setSingleStep(0.1)
+        self.remote_logprob_sb.setValue(self.config.get("remote_logprob_threshold", -1.0))
+        self.add_info_row(form, "logprob_threshold", self.remote_logprob_sb, "logprob")
+
+        from PySide6.QtWidgets import QPlainTextEdit
+        self.remote_replacements_te = QPlainTextEdit()
+        self.remote_replacements_te.setPlaceholderText("word:replacement\nколл:call")
+        self.remote_replacements_te.setPlainText(self.config.get("remote_word_replacements", ""))
+        self.remote_replacements_te.setMaximumHeight(80)
+        self.add_info_row(form, "word_replacements", self.remote_replacements_te, "word_replacements")
+
+        layout.addLayout(form)
+        layout.addStretch()
+        self.tabs.addTab(tab, tr("tab_remote"))
+
+    def _toggle_status_timer(self, state):
+        if state == Qt.Checked or state == 2:
+            self.status_timer.start(15000) # 15 seconds
+        else:
+            self.status_timer.stop()
+            self.ts_status_lbl.setText("---")
+            self.worker_status_lbl.setText(tr("status_offline"))
 
     def _on_opacity_slider_changed(self, value):
         self.opacity_preview.emit(value / 100.0)
@@ -426,8 +519,12 @@ class SettingsDialog(QDialog):
     def _test_worker(self):
         if self.tester and self.tester.isRunning():
             return
+        
+        # Only test if remote mode is actually enabled
+        if not self.remote_mode_chk.isChecked():
+            return
 
-        print(f"\n--- Connection Test Started [{time.strftime('%H:%M:%S')}] ---")
+        print(f"\n--- Periodic Connection Check [{time.strftime('%H:%M:%S')}] ---")
         node = self.remote_node_le.text().strip()
         manual_url = self.manual_url_le.text().strip()
         api_key = self.remote_key_le.text().strip()
@@ -437,16 +534,17 @@ class SettingsDialog(QDialog):
             self.worker_status_lbl.setText("Enter Node or URL")
             return
 
-        self.worker_status_lbl.setText("Connecting...")
-        self.worker_status_lbl.setStyleSheet("color: orange;")
-        self.ts_status_lbl.setText("Checking...")
-        self.ts_status_lbl.setStyleSheet("color: orange;")
-        self.test_worker_btn.setEnabled(False)
+        # Don't change text/color to orange here to avoid flickering every 15s
+        # unless it was previously failed/unknown
+        if "online" not in self.worker_status_lbl.text().lower():
+             self.worker_status_lbl.setText("Connecting...")
+             self.worker_status_lbl.setStyleSheet("color: orange;")
+             self.ts_status_lbl.setText("Checking...")
+             self.ts_status_lbl.setStyleSheet("color: orange;")
         
         self.tester = ConnectionTester(node, api_key, manual_url, ts_key)
         self.tester.ts_signal.connect(self._on_ts_result)
         self.tester.worker_signal.connect(self._on_worker_result)
-        self.tester.finished.connect(lambda: self.test_worker_btn.setEnabled(True))
         self.tester.start()
 
     def _on_ts_result(self, connected, state):
@@ -536,6 +634,7 @@ class SettingsDialog(QDialog):
 
     def save(self):
         self.vol_timer.stop()
+        self.status_timer.stop()
         self.config["model_name"] = self.model_cb.currentText()
         self.config["selected_mic"] = self.mic_cb.currentData()
         self.config["engine"] = self.engine_cb.currentData()
@@ -554,11 +653,16 @@ class SettingsDialog(QDialog):
         self.config["add_space"] = self.add_space_chk.isChecked()
         self.config["add_newline"] = self.add_newline_chk.isChecked()
         self.config["pause_media_on_record"] = self.pause_media_chk.isChecked()
+        self.config["smart_normalization"] = self.smart_normalization_chk.isChecked()
         
         self.config["opacity"] = self.opacity_slider.value() / 100.0
         self.config["hotkey"] = self.hotkey_le.text().strip().lower()
         self.config["beam_size"] = self.beam_size_sb.value()
         self.config["temperature"] = self.temp_sb.value()
+        self.config["no_speech_threshold"] = self.no_speech_sb.value()
+        self.config["logprob_threshold"] = self.logprob_sb.value()
+        self.config["word_replacements"] = self.replacements_te.toPlainText()
+
         self.config["backspace_cleanup"] = self.cleanup_sb.value()
         self.config["unload_idle"] = self.unload_idle_chk.isChecked()
         self.config["idle_time_minutes"] = self.idle_time_sb.value()
@@ -570,11 +674,23 @@ class SettingsDialog(QDialog):
         self.config["remote_worker_url"] = self.manual_url_le.text().strip()
         self.config["tailscale_auth_key"] = self.ts_key_le.text().strip()
         
+        # New remote-specific transcription settings
+        self.config["remote_model_name"] = self.remote_model_cb.currentText()
+        self.config["remote_engine"] = self.remote_engine_cb.currentData()
+        self.config["remote_language"] = self.remote_lang_cb.currentData()
+        self.config["remote_beam_size"] = self.remote_beam_size_sb.value()
+        self.config["remote_temperature"] = self.remote_temp_sb.value()
+        self.config["remote_initial_prompt"] = self.remote_prompt_le.text()
+        self.config["remote_no_speech_threshold"] = self.remote_no_speech_sb.value()
+        self.config["remote_logprob_threshold"] = self.remote_logprob_sb.value()
+        self.config["remote_word_replacements"] = self.remote_replacements_te.toPlainText()
+
         save_config(self.config)
         set_ui_lang(self.config["ui_language"])
         self.accept()
 
     def cancel(self):
         self.vol_timer.stop()
+        self.status_timer.stop()
         self.opacity_preview.emit(self.original_opacity)
         self.reject()

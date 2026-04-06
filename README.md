@@ -1,7 +1,5 @@
 # Voysix — Professional Speech-to-Text for Desktop
 
-![Voysix Logo](new_logo.png)
-
 [![CI/CD Status](https://github.com/your-username/voysix/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/your-username/voysix/actions)
 ![License](https://img.shields.io/github/license/your-username/voysix)
 ![Release](https://img.shields.io/github/v/release/your-username/voysix?include_prereleases)
@@ -26,7 +24,7 @@
 Voysix is split into two independent parts, allowing for flexible deployment scenarios:
 
 ```mermaid
-graph TD
+graph LR
     subgraph "Desktop Client (Voysix App)"
         A[Hotkey Monitor] --> B[Audio Recorder]
         B --> C[Orchestrator]
@@ -58,6 +56,19 @@ A high-performance **FastAPI** backend for offloading computations.
 
 ---
 
+## 🔄 Core Workflow
+
+```mermaid
+graph LR
+    A[Start Recording] --> B[Voice Capture]
+    B --> C[Transcription Engine]
+    C --> D[Correction & Smart Cleanup]
+    D --> E[Final Formatting]
+    E --> F[Native Auto-Paste]
+```
+
+---
+
 ## 🚀 Getting Started
 
 ### Installation (Standard User)
@@ -81,8 +92,40 @@ If you just want to use Voysix, wait for the first release or follow the build s
 3. **Setup Worker (Optional)**:
    ```bash
    cd worker
+   # Option A: Build and run locally
    docker build -t voysix-worker .
-   docker run -d --privileged -e TS_AUTHKEY=<your-key> voysix-worker
+   docker run -d --name voysix-worker --restart unless-stopped -e TS_AUTHKEY=<your-key> voysix-worker
+
+   # Option B: Pull from Docker Hub (Simplified)
+   # docker pull your-username/voysix-worker:latest
+   # docker run -d --name voysix-worker -e TS_AUTHKEY=<your-key> your-username/voysix-worker
+
+#### ⚙️ Worker Environment Variables
+The following variables can be passed to the container using `-e KEY=VALUE`:
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `TS_AUTHKEY` | **(Required)** Your Tailscale Auth Key to join the private network. | - |
+| `API_KEY` | Optional security key for the worker. Must match the "Worker API Key" in the app settings. | - |
+| `GPU_ENABLED` | Set to `1` to enable NVIDIA GPU acceleration. | `0` |
+| `MODEL_NAME` | Default whisper model to load on startup (tiny, base, small, etc). | `base` |
+
+#### ⚡ GPU Acceleration (Optional)
+To enable NVIDIA GPU support in the worker, ensure you have the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed on your host.
+
+Then, run the container with the `GPU_ENABLED=1` environment variable and the `--gpus all` flag:
+
+```bash
+docker run -d --name voysix-worker \
+  --restart unless-stopped \
+  --gpus all \
+  -e TS_AUTHKEY=<your-tailscale-key> \
+  -e API_KEY=<your-api-key> \
+  -e GPU_ENABLED=1 \
+  voysix-worker
+```
+
+**Note:** On the first run with `GPU_ENABLED=1`, the worker will detect the missing CUDA dependencies and automatically download **~3GB** of CUDA-enabled PyTorch libraries directly into the container. This only happens once per container lifecycle.
    ```
 
 ---

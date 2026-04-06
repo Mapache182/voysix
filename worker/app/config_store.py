@@ -1,20 +1,25 @@
 import threading
+import os
 
 _lock = threading.Lock()
 
 _config = {
     "model": "base",
     "language": "auto",
-    "engine": "whisper",
+    "engine": "openai-whisper",
+    "device": os.getenv("DEFAULT_DEVICE", "cpu"), # 'cpu' or 'cuda'
     "temperature": 0.0,
     "beam_size": 1,
-    "initial_prompt": ""
+    "initial_prompt": "",
+    "no_speech_threshold": 0.6,
+    "logprob_threshold": -1.0
 }
 
 _capabilities = {
-    "models": ["base", "small", "medium"],
+    "models": ["base", "small", "medium", "large", "distil-large-v3"],
     "languages": ["auto", "en", "ru"],
-    "engines": ["whisper"]
+    "engines": ["openai-whisper", "faster-whisper"],
+    "devices": ["cpu", "cuda"]
 }
 
 

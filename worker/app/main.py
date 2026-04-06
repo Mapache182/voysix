@@ -1,11 +1,21 @@
 import os
+import time
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
-from .service import transcribe_audio, is_busy
+import threading
+from .service import transcribe_audio, is_busy, is_initializing, warm_up
 from .config_store import get_config, update_config, get_capabilities
 
 app = FastAPI()
+
+# 🔹 Startup
+@app.on_event("startup")
+def startup_event():
+    # Start model download/warm-up in a background thread
+    print("--- [Worker Startup] Initiating model warm-up ---")
+    threading.Thread(target=warm_up, daemon=True).start()
+
 
 # 🔹 Auth Dependency
 def verify_api_key(authorization: str = Header(None)):
@@ -28,7 +38,8 @@ def health():
     return {
         "status": "ok",
         "service": "voysix-worker",
-        "busy": is_busy()
+        "busy": is_busy(),
+        "initializing": is_initializing()
     }
 
 
@@ -58,10 +69,18 @@ def capabilities():
 
 # 🔹 Transcribe
 @app.post("/transcribe", dependencies=[Depends(verify_api_key)])
-async def transcribe(file: UploadFile = File(...)):
+def transcribe(file: UploadFile = File(...)):
+    start_time = time.time()
     try:
-        content = await file.read()
+        content = file.file.read()
+        audio_len = len(content) / 32000 # 16kHz, 16bit, mono
+        
+        print(f"--- [Worker] Transcribing {audio_len:.2f}s of audio ---")
         text = transcribe_audio(content)
+        
+        duration = time.time() - start_time
+        speed_ratio = audio_len / duration if duration > 0 else 0
+        print(f"--- [Worker] SUCCESS: Done in {duration:.2f}s ({speed_ratio:.1f}x real-time) ---")
 
         return {
             "status": "ok",

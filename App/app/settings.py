@@ -41,7 +41,20 @@ DEFAULT_CONFIG = {
     "unload_idle": True,
     "idle_time_minutes": 5,
     "pre_record_seconds": 0.0,
-    "pause_media_on_record": False
+    "pause_media_on_record": False,
+    "remote_model_name": "base",
+    "remote_engine": "openai-whisper",
+    "remote_beam_size": 5,
+    "remote_temperature": 0.0,
+    "remote_language": "auto",
+    "remote_initial_prompt": "Это запись русской речи. Пожалуйста, соблюдайте пунктуацию и правильные окончания слов.",
+    "remote_no_speech_threshold": 0.6,
+    "remote_logprob_threshold": -1.0,
+    "no_speech_threshold": 0.6,
+    "logprob_threshold": -1.0,
+    "smart_normalization": False,
+    "word_replacements": "мерч:merch\nвоисикс:Voysix",
+    "remote_word_replacements": ""
 }
 
 def load_config():

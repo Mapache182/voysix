@@ -74,16 +74,14 @@ jobs:
           pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install -r App/requirements.txt
 
-      - name: Build with cx_Freeze
+      - name: Build and Package App
         working-directory: ./App
+        shell: bash
         run: |
-          python build_dist.py
-
-      - name: Compile Inno Setup Installer (ISCC)
-        working-directory: ./App
-        run: |
-          # ISCC предустановлен на windows-latest
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/installer.iss
+          # Extract version from tag (e.g., app-4.4.52 -> 4.4.52)
+          VERSION=${GITHUB_REF_NAME#app-}
+          echo "Building version: $VERSION"
+          python build_dist.py $VERSION
 
       - name: Create Release and Upload Asset
         uses: softprops/action-gh-release@v2

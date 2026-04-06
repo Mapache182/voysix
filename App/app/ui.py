@@ -389,7 +389,6 @@ class AppTrayIcon(QSystemTrayIcon):
         self.menu = QMenu()
         self.settings_action = QAction(tr("settings"))
         self.log_action = QAction(tr("show_logs"))
-        self.restart_action = QAction(tr("restart"))
         self.about_action = QAction(tr("about"))
         self.exit_action = QAction(tr("exit"))
 
@@ -398,13 +397,11 @@ class AppTrayIcon(QSystemTrayIcon):
             # Same icon for all as a starting point, OR specific ones if we have them
             self.settings_action.setIcon(QIcon(icon_path))
             self.log_action.setIcon(QIcon(icon_path))
-            self.restart_action.setIcon(QIcon(icon_path))
             self.about_action.setIcon(QIcon(icon_path))
             self.exit_action.setIcon(QIcon(icon_path))
         
         self.menu.addAction(self.settings_action)
         self.menu.addAction(self.log_action)
-        self.menu.addAction(self.restart_action)
         self.menu.addAction(self.about_action)
         self.menu.addSeparator()
         self.menu.addAction(self.exit_action)

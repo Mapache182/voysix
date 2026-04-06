@@ -1,6 +1,6 @@
 import os
 import time
-from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
 
 import threading
@@ -69,13 +69,20 @@ def capabilities():
 
 # 🔹 Transcribe
 @app.post("/transcribe", dependencies=[Depends(verify_api_key)])
-def transcribe(file: UploadFile = File(...)):
+def transcribe(request: Request, file: UploadFile = File(...)):
     start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    cfg = get_config()
+    model_name = cfg.get("model", "unknown")
+    engine = cfg.get("engine", "openai-whisper")
+
     try:
         content = file.file.read()
         audio_len = len(content) / 32000 # 16kHz, 16bit, mono
         
-        print(f"--- [Worker] Transcribing {audio_len:.2f}s of audio ---")
+        print(f"--- [Worker] [{client_ip}] Request received: {audio_len:.2f}s of audio ---")
+        print(f"--- [Worker] [{client_ip}] Model: {model_name} | Engine: {engine} ---")
+
         text = transcribe_audio(content)
         
         duration = time.time() - start_time
@@ -88,7 +95,8 @@ def transcribe(file: UploadFile = File(...)):
         }
 
     except Exception as e:
+        print(f"--- [Worker] ERROR: {str(e)} ---")
         return JSONResponse(
             status_code=500,
             content={"status": "error", "message": str(e)}
-        )
+        )

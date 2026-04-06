@@ -108,7 +108,6 @@ class AppController(QObject):
         self.tray.exit_action.triggered.connect(self.quit)
         self.tray.settings_action.triggered.connect(self.show_settings)
         self.tray.log_action.triggered.connect(self.show_logs)
-        self.tray.restart_action.triggered.connect(self.restart_services)
         self.tray.about_action.triggered.connect(self.show_about)
         self.tray.activated.connect(self.on_tray_activated)
         self.tray.show()
@@ -500,7 +499,6 @@ class AppController(QObject):
         # Refresh Tray Menu
         self.tray.settings_action.setText(tr("settings"))
         self.tray.log_action.setText(tr("show_logs"))
-        self.tray.restart_action.setText(tr("restart"))
         self.tray.about_action.setText(tr("about"))
         self.tray.exit_action.setText(tr("exit"))
 

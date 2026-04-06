@@ -31,7 +31,7 @@ DEFAULT_CONFIG = {
     "ui_language": "en",
     "ui_design": "waveform", # "classic" or "waveform"
     "remote_mode": False,
-    "remote_worker_name": "worker-tailscale-node",
+    "remote_worker_name": "voysix-worker",
     "remote_worker_url": "",
     "remote_api_key": "",
     "tailscale_auth_key": "",

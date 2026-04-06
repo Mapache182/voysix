@@ -416,7 +416,7 @@ class SettingsDialog(QDialog):
 
         self.remote_node_le = QLineEdit()
         self.remote_node_le.setText(self.config.get("remote_worker_name", ""))
-        self.remote_node_le.setPlaceholderText("tailscale-node-name")
+        self.remote_node_le.setPlaceholderText("voysix-worker")
         self.add_info_row(form, "remote_node", self.remote_node_le, "remote_node")
 
         self.remote_key_le = QLineEdit()

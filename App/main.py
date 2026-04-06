@@ -42,7 +42,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.51"
+        self.version = "4.4.56"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:

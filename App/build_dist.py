@@ -8,7 +8,9 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 VERSION_FILE = os.path.join(PROJECT_DIR, "version.txt")
 SETUP_FILE = os.path.join(PROJECT_DIR, "setup.py")
 ISS_FILE = os.path.join(PROJECT_DIR, "installer", "installer.iss")
-VENV_PYTHON = os.path.join(PROJECT_DIR, "..", "venv", "Scripts", "python.exe")
+
+# Use current python executable
+VENV_PYTHON = sys.executable
 MAIN_FILE = os.path.join(PROJECT_DIR, "main.py")
 ISCC_PATH = r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 
@@ -61,9 +63,13 @@ def run_build():
 
 if __name__ == "__main__":
     try:
-        current = get_current_version()
-        new_version = increment_patch(current)
-        print(f"Updating version: {current} -> {new_version}")
+        if len(sys.argv) > 1:
+            new_version = sys.argv[1]
+            print(f"Building version from argument: {new_version}")
+        else:
+            current = get_current_version()
+            new_version = increment_patch(current)
+            print(f"Updating version: {current} -> {new_version}")
         
         save_version(new_version)
         update_setup_py(new_version)
@@ -73,7 +79,7 @@ if __name__ == "__main__":
         run_build()
         
         print("\n\n" + "="*40)
-        print(f"SUCCESS! New version {new_version} built.")
+        print(f"SUCCESS! Version {new_version} built.")
         print(f"Installer is available at: {os.path.join(PROJECT_DIR, 'dist', 'Voysix_Setup.exe')}")
         print("="*40)
         

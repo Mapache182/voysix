@@ -42,7 +42,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.65"
+        self.version = "4.4.67"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:
@@ -79,9 +79,9 @@ class AppController(QObject):
         self.processing_thread.start()
         self.is_processing = False
         
-        # Background model loading (if not in RAM saving mode)
+        # Background model loading (if not in RAM saving mode and local is enabled)
         self.last_action_time = time.time()
-        if not self.config.get("unload_idle", False):
+        if not self.config.get("unload_idle", False) and self.config.get("local_whisper_enabled", True):
             self.load_model_async()
         
         # Idle timer to unload model
@@ -185,7 +185,7 @@ class AppController(QObject):
                 self.last_action_time = current_time
                 
                 # Start loading model if needed
-                if self.transcriber.model is None and not self.config.get("remote_mode", False):
+                if self.transcriber.model is None and not self.config.get("remote_mode", False) and self.config.get("local_whisper_enabled", True):
                     print("Loading model on demand...")
                     self.load_model_async()
                 
@@ -301,8 +301,10 @@ class AppController(QObject):
             print(f"Transcription started for {len(audio)/16000:.2f}s of audio...")
             self.abort_transcription = False # Reset flag at start
             
-            # --- Remote Mode Logic with Fallback ---
-            transcriber = self.transcriber
+            # --- Engine Selection Logic ---
+            transcriber = None
+            is_available = False
+            
             if self.config.get("remote_mode", False):
                 from app.transcriber import RemoteWhisperTranscriber
                 
@@ -337,13 +339,31 @@ class AppController(QObject):
                     transcriber = remote
                     print(f"✅ Using REMOTE transcriber (worker at {remote.client.base_url})")
                 else:
-                    print("⚠️ Remote worker NOT REACHABLE. Falling back to LOCAL.")
-                    # 🔹 Ensure local model is loaded if we fall back
+                    if self.config.get("local_whisper_enabled", True):
+                        print("⚠️ Remote worker NOT REACHABLE. Falling back to LOCAL.")
+                        transcriber = self.transcriber
+                        # 🔹 Ensure local model is loaded if we fall back
+                        if transcriber.model is None:
+                            print("Local model not loaded, loading now...")
+                            self.status_changed.emit("loading")
+                            transcriber.load_model(self.config["model_name"], self.config.get("engine", "openai-whisper"))
+                            self.status_changed.emit("processing")
+                    else:
+                        print("❌ Remote worker NOT REACHABLE and LOCAL fallback is DISABLED.")
+            
+            # If not in remote mode, or remote failed and fallback was disabled/checked later
+            if transcriber is None:
+                if self.config.get("local_whisper_enabled", True):
+                    transcriber = self.transcriber
                     if transcriber.model is None:
                         print("Local model not loaded, loading now...")
                         self.status_changed.emit("loading")
                         transcriber.load_model(self.config["model_name"], self.config.get("engine", "openai-whisper"))
                         self.status_changed.emit("processing")
+                else:
+                    print("❌ No transcription engine available (Local Whisper is DISABLED).")
+                    self.status_changed.emit("idle")
+                    return
 
             # 🔹 Select appropriate parameters for local or remote mode
             if self.config.get("remote_mode", False) and is_available:
@@ -500,11 +520,20 @@ class AppController(QObject):
         self.listener.stop()
         self.listener.start(self.config["hotkey"])
 
-        # If model, engine, or gpu changed, reload the model instead of restarting the app
-        if self.transcriber.model_name != self.config["model_name"] or \
-           self.transcriber.engine != self.config["engine"] or \
-           getattr(self.transcriber, 'use_gpu', False) != self.config.get("use_gpu", False):
-            print("Model/Engine/GPU changed. Reloading model dynamically...")
+        # If Local is disabled, unload it from RAM
+        if not self.config.get("local_whisper_enabled", True):
+            if self.transcriber.model is not None:
+                print("Local Whisper disabled in settings. Unloading model...")
+                self.transcriber.unload_model()
+        
+        # If model, engine, or gpu changed (and local is enabled), OR if it was re-enabled
+        elif (self.config.get("local_whisper_enabled", True) and (
+            self.transcriber.model_name != self.config["model_name"] or \
+            self.transcriber.engine != self.config["engine"] or \
+            getattr(self.transcriber, 'use_gpu', False) != self.config.get("use_gpu", False) or \
+            (self.transcriber.model is None and not self.config.get("unload_idle", False))
+        )):
+            print("Local Whisper configuration changed. Reloading model dynamically...")
             self.load_model_async(
                 self.config["model_name"], 
                 self.config.get("engine", "openai-whisper"),
@@ -531,6 +560,7 @@ class AppController(QObject):
     def show_logs(self):
         self.log_window.show()
         self.log_window.activateWindow()
+        self.log_window.raise_()
 
     def show_about(self):
         title = tr("about_title")

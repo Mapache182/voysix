@@ -12,6 +12,7 @@ TRANSLATIONS = {
         "save": "Save",
         "cancel": "Cancel",
         "model": "Whisper Model:",
+        "local_whisper": "Local Whisper Enabled:",
         "microphone": "Microphone:",
         "engine": "Transcription Engine:",
         "language": "Transcription Language:",
@@ -77,7 +78,8 @@ TRANSLATIONS = {
         "condition_on_previous_text": "Condition on Previous Text:",
         "hallucination_silence_threshold": "Hallucination Threshold:",
         "repetition_penalty": "Repetition Penalty:",
-        "no_repeat_ngram_size": "No-Repeat N-gram Size:"
+        "no_repeat_ngram_size": "No-Repeat N-gram Size:",
+        "clear": "Clear"
     },
     "ru": {
         "ready": "Готов",
@@ -92,6 +94,7 @@ TRANSLATIONS = {
         "save": "Сохранить",
         "cancel": "Отмена",
         "model": "Модель Whisper:",
+        "local_whisper": "Локальный Whisper:",
         "microphone": "Микрофон:",
         "engine": "Движок транскрибации:",
         "language": "Язык транскрибации:",
@@ -157,7 +160,8 @@ TRANSLATIONS = {
         "condition_on_previous_text": "Учитывать прошлый текст:",
         "hallucination_silence_threshold": "Порог галлюцинаций:",
         "repetition_penalty": "Штраф за повторы:",
-        "no_repeat_ngram_size": "Запрет повторов N-грамм:"
+        "no_repeat_ngram_size": "Запрет повторов N-грамм:",
+        "clear": "Очистить"
     },
     "es": {
         "ready": "Listo",
@@ -172,6 +176,7 @@ TRANSLATIONS = {
         "save": "Guardar",
         "cancel": "Cancelar",
         "model": "Modelo Whisper:",
+        "local_whisper": "Local Whisper habilitado:",
         "microphone": "Micrófono:",
         "engine": "Motor de Transcripción:",
         "language": "Idioma de Transcripción:",
@@ -224,13 +229,15 @@ TRANSLATIONS = {
         "processing_settings": "Ajustes de Procesamiento",
         "about": "Acerca de",
         "about_title": "Acerca de Voysix",
-        "about_text": "Voysix v{version}\n\nVoysix.\nTranscripción de voz a texto con el modelo Whisper local.\n\nFunciones clave:\n- Transcripción de alta precisión\n- Baja latencia\n- Procesamiento local privado"
+        "about_text": "Voysix v{version}\n\nVoysix.\nTranscripción de voz a texto con el modelo Whisper local.\n\nFunciones clave:\n- Transcripción de alta precisión\n- Baja latencia\n- Procesamiento local privado",
+        "clear": "Limpiar"
     }
 }
 
 HELP_TEXT = {
     "en": {
         "model": "<b>Whisper Model:</b><br>'tiny' is fastest, 'large' is most accurate. 'base' is recommended for most users.",
+        "local_whisper": "<b>Local Whisper:</b><br>If disabled, the app will NOT use your computer's CPU/GPU for transcription. Useful if you only want to use a Remote Worker.",
         "mic": "<b>Microphone:</b><br>Select the audio device to record from. 'Default' follows your Windows settings.",
         "engine": "<b>Engine:</b><br>'openai-whisper' is the original library. 'faster-whisper' is a highly optimized version that is 4-8x faster.",
         "lang": "<b>Language:</b><br>Forcing a language (e.g., Russian) improves accuracy and reduces translation errors.",
@@ -268,6 +275,7 @@ HELP_TEXT = {
     },
     "ru": {
         "model": "<b>Модель Whisper:</b><br>'tiny' — самая быстрая, 'large' — самая точная. 'base' рекомендуется для большинства.",
+        "local_whisper": "<b>Локальный Whisper:</b><br>Если отключено, приложение НЕ будет использовать процессор вашего ПК. Полезно, если вы хотите работать ТОЛЬКО через удаленный воркер.",
         "mic": "<b>Микрофон:</b><br>Выберите устройство записи. 'Системное' использует настройки Windows по умолчанию.",
         "engine": "<b>Движок:</b><br>'openai-whisper' — оригинальная библиотека. 'faster-whisper' — оптимизированная версия, работает в 4-8 раз быстрее.",
         "lang": "<b>Язык:</b><br>Принудительный выбор языка (например, русский) улучшает точность и уменьшает ошибки транскрибации.",
@@ -305,6 +313,7 @@ HELP_TEXT = {
     },
     "es": {
         "model": "<b>Modelo Whisper:</b><br>'tiny' es el más rápido, 'large' el más preciso. 'base' se recomienda para la mayoría.",
+        "local_whisper": "<b>Local Whisper:</b><br>Si se deshabilita, la aplicación NO usará su procesador. Útil si solo quiere usar un Trabajador Remoto.",
         "mic": "<b>Micrófono:</b><br>Seleccione el dispositivo. 'Predeterminado' sigue la configuración de Windows.",
         "engine": "<b>Motor:</b><br>'openai-whisper' es la original. 'faster-whisper' es una versión optimizada que es de 4 a 8 veces más rápida.",
         "lang": "<b>Idioma:</b><br>Forzar un idioma (ej. español) mejora la precisión y reduce errores.",

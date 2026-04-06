@@ -1,12 +1,14 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSystemTrayIcon, QMenu, QTextEdit, QPushButton, QSpacerItem, QSizePolicy
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSystemTrayIcon, QMenu, QTextEdit, QPlainTextEdit, QPushButton, QSpacerItem, QSizePolicy
 from PySide6.QtCore import Qt, QTimer, Signal, QPoint, QRect
 from PySide6.QtGui import QIcon, QPainter, QColor, QAction, QTextCursor, QPixmap, QLinearGradient
 import sys
 import os
 import io
 import ctypes
+import time
 from app.i18n import tr, hlp
 from app.utils import get_resource_path
+from app.settings import APP_DATA_DIR
 
 class FloatingStatus(QWidget):
     geometry_changed = Signal()
@@ -289,12 +291,49 @@ class LogWindow(QWidget):
         icon_path = get_resource_path(os.path.join("assets", "icon.png"))
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
-        self.resize(600, 400)
+        self.resize(700, 450)
+        
         layout = QVBoxLayout(self)
-        self.text_edit = QTextEdit()
+        layout.setContentsMargins(5, 5, 5, 5)
+        
+        # Log Text area
+        self.text_edit = QPlainTextEdit()
         self.text_edit.setReadOnly(True)
-        self.text_edit.setStyleSheet("background-color: #1e1e1e; color: #d4d4d4; font-family: monospace;")
+        # Limit lines to prevent memory bloat and crashes
+        self.text_edit.setMaximumBlockCount(2000)
+        self.text_edit.setStyleSheet("""
+            QPlainTextEdit {
+                background-color: #121212; 
+                color: #e0e0e0; 
+                font-family: 'Consolas', 'Monaco', monospace; 
+                font-size: 11px;
+                border: 1px solid #333;
+                border-radius: 4px;
+            }
+        """)
         layout.addWidget(self.text_edit)
+        
+        # Bottom controls
+        controls = QHBoxLayout()
+        self.clear_btn = QPushButton(tr("clear") if tr("clear") != "clear" else "Clear")
+        self.clear_btn.setFixedWidth(80)
+        self.clear_btn.clicked.connect(self.text_edit.clear)
+        self.clear_btn.setStyleSheet("""
+            QPushButton {
+                background: #333;
+                color: white;
+                border: none;
+                padding: 5px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background: #444;
+            }
+        """)
+        
+        controls.addStretch()
+        controls.addWidget(self.clear_btn)
+        layout.addLayout(controls)
 
     def append_log(self, text):
         self.text_edit.moveCursor(QTextCursor.End)
@@ -305,11 +344,36 @@ class LogHandler(io.TextIOBase):
     def __init__(self, signal):
         super().__init__()
         self.signal = signal
+        self.log_file_path = os.path.join(APP_DATA_DIR, "voysix.log")
+        # Ensure log file doesn't grow infinitely (optional, but good for now just to open it)
+        try:
+            with open(self.log_file_path, "a", encoding="utf-8") as f:
+                f.write(f"\n--- Session started at {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+        except:
+            pass
+
+    @property
+    def encoding(self):
+        return "utf-8"
 
     def write(self, text):
-        if text.strip():
+        if text:
+            # 1. UI Update (via signal)
             self.signal.emit(text)
+            
+            # 2. File Update
+            try:
+                with open(self.log_file_path, "a", encoding="utf-8") as f:
+                    f.write(text)
+            except:
+                pass
         return len(text)
+
+    def isatty(self):
+        return False
+
+    def flush(self):
+        pass
 
 class AppTrayIcon(QSystemTrayIcon):
     def __init__(self, parent=None):

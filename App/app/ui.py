@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSystemTrayIcon, QMenu, QTextEdit, QPlainTextEdit, QPushButton, QSpacerItem, QSizePolicy
-from PySide6.QtCore import Qt, QTimer, Signal, QPoint, QRect
+from PySide6.QtCore import Qt, QTimer, Signal, Slot, QPoint, QRect
 from PySide6.QtGui import QIcon, QPainter, QColor, QAction, QTextCursor, QPixmap, QLinearGradient
 import sys
 import os
@@ -31,6 +31,9 @@ class FloatingStatus(QWidget):
         
         self.recording_duration = 0.0
         self.transcription_duration = 0.0
+        self.remote_enabled = False
+        self.local_enabled = True
+        self.remote_healthy = False
         
         self.status_labels = {
             "idle": tr("ready"),
@@ -78,6 +81,13 @@ class FloatingStatus(QWidget):
             "processing": QColor(0, 120, 215, 230),# Windows Blue
             "done": QColor(34, 139, 34, 230)       # Forest Green
         }
+
+    @Slot(bool, bool, bool)
+    def set_engine_state(self, remote_enabled: bool, local_enabled: bool, remote_healthy: bool):
+        self.remote_enabled = remote_enabled
+        self.local_enabled = local_enabled
+        self.remote_healthy = remote_healthy
+        self.update()
 
     def set_status(self, status):
         self.status = status
@@ -281,6 +291,30 @@ class FloatingStatus(QWidget):
                 trans_text = f"⚡ {self.transcription_duration:.1f}s"
                 rect = QRect(0, self.height() - 16, self.width() - 35, 12)
                 painter.drawText(rect, Qt.AlignRight | Qt.AlignVCenter, trans_text)
+
+        # Engine Icons (Left side)
+        painter.save()
+        font = painter.font()
+        font.setPointSize(8) # small emoji size
+        painter.setFont(font)
+        
+        # Left Margin
+        margin_left = 8
+        
+        if self.remote_enabled:
+            # Opacity depends on health
+            painter.setOpacity(0.9 if self.remote_healthy else 0.3)
+            # ☁️
+            rect_top = QRect(margin_left, 4, 16, 12)
+            painter.drawText(rect_top, Qt.AlignLeft | Qt.AlignTop, "☁")
+            
+        if self.local_enabled:
+            painter.setOpacity(0.8)
+            # 💻
+            rect_bottom = QRect(margin_left, self.height() - 16, 16, 12)
+            painter.drawText(rect_bottom, Qt.AlignLeft | Qt.AlignBottom, "💻")
+            
+        painter.restore()
 
 
 

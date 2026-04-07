@@ -61,8 +61,29 @@ Built with **PySide6**, this component handles the recording logic and system-wi
 ### 2. Voysix Worker (`/worker`)
 A high-performance **FastAPI** backend for offloading computations.
 - Optimized for **Docker** and **NVIDIA GPUs**.
-- Tailscale integration for secure remote access without port forwarding.
+- **Tailscale Native**: Secure remote access without port forwarding or public IPs.
 - Model caching to avoid reloading overhead.
+
+---
+
+## 🔗 Tailscale: Secure Remote Processing
+
+Tailscale is a zero-config mesh VPN that creates a secure, private network between your devices. Voysix uses it to tunnel audio data from your desktop to your remote GPU worker anywhere in the world.
+
+### Why use Tailscale with Voysix?
+- 🔒 **End-to-End Encryption**: Your voice data never touches the public internet unencrypted.
+- 🚀 **Zero Configuration**: No port forwarding, no static IPs, and no complex firewall rules.
+- 🌍 **Work From Anywhere**: Use your home GPU server from your laptop at a coffee shop or office.
+- 🛠️ **Seamless Integration**: The Voysix App automatically discovers workers on your Tailnet.
+
+### How to Connect a Remote Worker
+1.  **Generate Auth Key**: Go to your [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys) and generate a **Reusable Auth Key**.
+2.  **Launch Worker**: Start the worker Docker container with the `TS_AUTHKEY` environment variable (see examples below).
+3.  **Setup Client**: 
+    - In Voysix App settings, go to **Remote Worker**.
+    - If Tailscale isn't installed, click **Download Tailscale** (the app handles the installation).
+    - Log in to Tailscale using the **same account** you used for the worker.
+4.  **Profit**: Once both are on the same Tailnet, simply enter the worker's Tailscale IP or hostname in the App settings.
 
 ---
 
@@ -168,20 +189,20 @@ Voysix uses **GitHub Actions** for automated building and quality assurance:
 
 ## 📦 Building Standalone Version
 
-Для сборки Windows-версии (EXE + установщик) используется автоматизированный скрипт:
+To build the Windows version (EXE + installer), an automated script is provided:
 
-1. Перейдите в папку приложения: `cd App`
-2. Запустите сборку:
+1. Navigate to the app directory: `cd App`
+2. Run the build script:
    ```bash
    python build_dist.py
    ```
 
-**Что делает этот скрипт:**
-- Автоматически увеличивает версию (patch) в `version.txt`, `main.py` и `setup.py`.
-- Компилирует Python-код в `.exe` с помощью **cx_Freeze**.
-- Собирает финальный инсталлятор через **Inno Setup**.
+**What this script does:**
+- Automatically increments the version (patch) in `version.txt`, `main.py`, and `setup.py`.
+- Compiles Python code into an `.exe` using **cx_Freeze**.
+- Generates a final installer using **Inno Setup**.
 
-Результат будет доступен в: `App/dist/Voysix_Setup.exe`.
+The result will be available at: `App/dist/Voysix_Setup.exe`.
 
 ---
 

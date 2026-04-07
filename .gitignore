@@ -7,3 +7,4 @@ App/build/*
 App/dist/*
 App/App_STT.egg-info/
 App/installer/output/*
+App/version.txt

@@ -25,6 +25,7 @@ class AppController(QObject):
     status_changed = Signal(str)
     log_signal = Signal(str)
     level_changed = Signal(float)
+    engine_state_changed = Signal(bool, bool, bool)
     
     def __init__(self):
         super().__init__()
@@ -42,7 +43,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.68"
+        self.version = "4.4.69"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:
@@ -127,6 +128,13 @@ class AppController(QObject):
         self.floating_ui.geometry_changed.connect(self.on_window_geometry_change)
         self.status_changed.connect(self.update_status) # Changed from set_status
         self.level_changed.connect(self.floating_ui.set_level)
+        self.engine_state_changed.connect(self.floating_ui.set_engine_state)
+        
+        self.engine_state_changed.emit(
+            self.config.get("remote_mode", False),
+            self.config.get("local_whisper_enabled", True),
+            False
+        )
         
         self.abort_transcription = False
         self.settings_dialog = None
@@ -334,6 +342,12 @@ class AppController(QObject):
                             is_available = True
                             self.worker_url = remote.client.base_url
                 
+                self.engine_state_changed.emit(
+                    self.config.get("remote_mode", False),
+                    self.config.get("local_whisper_enabled", True),
+                    is_available
+                )
+                
                 if is_available:
                     transcriber = remote
                     print(f"✅ Using REMOTE transcriber (worker at {remote.client.base_url})")
@@ -496,6 +510,12 @@ class AppController(QObject):
         }
         self.floating_ui.set_status(self.floating_ui.status) # Forces text update
         
+        self.engine_state_changed.emit(
+            self.config.get("remote_mode", False),
+            self.config.get("local_whisper_enabled", True),
+            self.worker_url is not None
+        )
+        
         # Refresh Tray Menu
         self.tray.settings_action.setText(tr("settings"))
         self.tray.log_action.setText(tr("show_logs"))
@@ -647,6 +667,12 @@ class AppController(QObject):
                     if self.worker_url:
                         print("⚠️ Remote worker LOST in network.")
                     self.worker_url = None
+                    
+                self.engine_state_changed.emit(
+                    self.config.get("remote_mode", False),
+                    self.config.get("local_whisper_enabled", True),
+                    self.worker_url is not None
+                )
                     
             except Exception as e:
                 print(f"Background discovery error: {e}")

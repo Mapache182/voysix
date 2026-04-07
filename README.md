@@ -19,6 +19,16 @@
 
 ---
 
+## 📸 Interface Preview
+
+<p align="center">
+  <img src="docs/images/settings_general.png" width="300" alt="General Settings">
+  <img src="docs/images/settings_local.png" width="300" alt="Local Whisper Settings">
+  <img src="docs/images/settings_remote.png" width="300" alt="Remote Worker Settings">
+</p>
+
+---
+
 ## 🏗️ Architecture & Core Components
 
 Voysix is split into two independent parts, allowing for flexible deployment scenarios:

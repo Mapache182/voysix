@@ -4,6 +4,7 @@ import tempfile
 import threading
 import os
 import io
+import time
 from faster_whisper import WhisperModel
 
 from .config_store import get_config
@@ -114,6 +115,7 @@ def transcribe_audio(audio_bytes: bytes) -> str:
                 tmp.write(audio_bytes)
                 tmp.flush()
 
+                t_start = time.time()
                 if engine == "faster-whisper":
                     # Faster Whisper API
                     segments, info = model.transcribe(
@@ -148,6 +150,8 @@ def transcribe_audio(audio_bytes: bytes) -> str:
                         fp16=(device == "cuda")
                     )
                     text = result["text"].strip()
+                t_dur = time.time() - t_start
+                print(f"[Worker] Transcription took {t_dur:.3f}s for {len(audio_bytes)/32000:.2f}s audio.")
 
                 # 🔹 Post-processing on worker side
                 text = _apply_replacements(text, cfg.get("word_replacements", ""))

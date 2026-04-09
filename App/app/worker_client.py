@@ -356,7 +356,8 @@ class WorkerClient:
             headers = self._get_headers()
             requests.post(f"{self.base_url}/config", json=worker_cfg, headers=headers, timeout=2)
 
-            # 🔹 Convert numpy to WAV bytes
+            # 🔹 Convert numpy to WAV bytes (Packaging)
+            t_pkg_start = time.time()
             wav_buf = io.BytesIO()
             with wave.open(wav_buf, "wb") as wf:
                 wf.setnchannels(1)
@@ -365,15 +366,22 @@ class WorkerClient:
                 # Convert float32 to int16
                 audio_int16 = np.clip(audio_np * 32767, -32768, 32767).astype(np.int16)
                 wf.writeframes(audio_int16.tobytes())
-
             wav_buf.seek(0)
+            t_pkg_dur = time.time() - t_pkg_start
+            print(f"DEBUG: Audio packaging took {t_pkg_dur:.3f}s")
 
-            # 🔹 Sending to /transcribe
+            # 🔹 Sending to /transcribe (Network + Backend Processing)
+            t_net_start = time.time()
             files = {"file": ("audio.wav", wav_buf, "audio/wav")}
             resp = requests.post(f"{self.base_url}/transcribe", files=files, headers=headers, timeout=120)
+            t_net_dur = time.time() - t_net_start
+            
             if resp.status_code == 200:
-                return resp.json().get("text", "").strip()
+                text = resp.json().get("text", "").strip()
+                print(f"DEBUG: Remote request took {t_net_dur:.3f}s (Response length: {len(text)})")
+                return text
             else:
+                print(f"DEBUG: Remote request failed after {t_net_dur:.3f}s with status {resp.status_code}")
                 return f"Worker error: {resp.text}"
         except requests.exceptions.Timeout:
              return "Remote transcription error: Connection timed out. The worker might be busy or model loading is taking too long."

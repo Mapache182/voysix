@@ -72,15 +72,20 @@ def output_transcription(text, mode="type", delay=0.7, cleanup=0, add_space=Fals
     elif mode == "type":
         pyperclip.copy(text)
         # Give OS time to settle and focus app
-        time.sleep(delay)
+        if delay > 0:
+            print(f"DEBUG: Waiting {delay}s for system focus before pasting...")
+            time.sleep(delay)
         
         # Cleanup potential junk (like a middle-click menu if any)
         if cleanup > 0:
+            print(f"DEBUG: Cleaning up {cleanup} backspaces...")
             pyautogui.press('backspace', presses=cleanup)
             time.sleep(0.1)
             
+        t_paste_start = time.time()
         native_paste()
-        print(f"Text pasted: {text[:20]}...")
+        t_paste_dur = time.time() - t_paste_start
+        print(f"Text pasted in {t_paste_dur:.3f}s: {text[:20]}...")
 
 def apply_replacements(text, replacements_str):
     if not text or not replacements_str:

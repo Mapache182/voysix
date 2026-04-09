@@ -448,8 +448,13 @@ class AppController(QObject):
             if smart_norm:
                 text = apply_smart_normalization(text)
                 
-            print(f"Transcription finished: '{text}'")
             trans_dur = time.time() - self.transcription_start_time
+            print(f"--- Performance Report ---")
+            print(f"Audio Length: {len(audio)/16000:.2f}s")
+            print(f"Processing Time: {trans_dur:.2f}s (Total)")
+            print(f"Recognized: '{text}'")
+            print(f"--------------------------")
+            
             self.floating_ui.set_durations(transcription=trans_dur)
             self.transcription_start_time = 0
             self.status_changed.emit("done")
@@ -645,11 +650,13 @@ class AppController(QObject):
                 
                 # 1. Brief Tailscale check (non-blocking)
                 ts = client.get_tailscale_status(auth_key=ts_key)
-                if ts["connected"]:
-                    print(f"Background Check: Tailscale is ONLINE ({ts['state']})")
-                else:
-                    # Don't spam restart, just log status
-                    print(f"Background Check: Tailscale is OFFLINE ({ts['state']})")
+                current_ts_connected = ts["connected"]
+                
+                # Only log if status changed to avoid "infinite" log spam
+                if not hasattr(self, "_last_ts_connected") or self._last_ts_connected != current_ts_connected:
+                    status_str = "ONLINE" if current_ts_connected else "OFFLINE"
+                    print(f"Background Check: Tailscale is {status_str} ({ts['state']})")
+                    self._last_ts_connected = current_ts_connected
                 
                 # 2. Worker Discovery
                 url = client.discover()

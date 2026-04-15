@@ -367,12 +367,29 @@ class WorkerClient:
             # Try compression if selected
             success = False
             if audio_format in ["flac", "ogg"]:
+                import tempfile
+                # On Windows, libsndfile 1.2.0+ can crash with Stack Overflow (0xc00000fd)
+                # when writing FLAC to a virtual file/buffer (io.BytesIO).
+                # Using a physical temporary file bypasses the problematic virtual I/O stack.
+                tmp_fd, tmp_path = tempfile.mkstemp(suffix=f".{audio_format}")
                 try:
+                    os.close(tmp_fd)
                     import soundfile as sf
-                    sf.write(wav_buf, audio_np, 16000, format=audio_format.upper())
+                    # Ensure data is in a format soundfile likes (float32, C-contiguous)
+                    data_to_write = np.ascontiguousarray(audio_np, dtype=np.float32)
+                    sf.write(tmp_path, data_to_write, 16000, format=audio_format.upper())
+                    
+                    with open(tmp_path, "rb") as f:
+                        wav_buf.write(f.read())
                     success = True
                 except Exception as e:
                     print(f"DEBUG: Failed to encode {audio_format}, falling back to wav: {e}")
+                finally:
+                    try:
+                        if os.path.exists(tmp_path):
+                            os.remove(tmp_path)
+                    except:
+                        pass
                     
             if not success:
                 audio_format = "wav" # Fallback

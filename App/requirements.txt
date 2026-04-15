@@ -15,7 +15,10 @@ huggingface-hub
 tokenizers
 requests
 charset-normalizer
+chardet
 pycaw
 comtypes
 psutil
 cx_Freeze
+soundfile
+

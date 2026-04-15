@@ -87,6 +87,12 @@ class FloatingStatus(QWidget):
         self.remote_enabled = remote_enabled
         self.local_enabled = local_enabled
         self.remote_healthy = remote_healthy
+        
+        if remote_enabled and not remote_healthy:
+            self.setToolTip(tr("worker_offline_tooltip"))
+        else:
+            self.setToolTip("")
+            
         self.update()
 
     def set_status(self, status):
@@ -126,6 +132,10 @@ class FloatingStatus(QWidget):
         flags = Qt.FramelessWindowHint | Qt.ToolTip
         if on: flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
+        
+        # CRITICAL: Re-apply transparency after changing window flags
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        
         self.setGeometry(geom)
         if on:
             try:
@@ -213,7 +223,7 @@ class FloatingStatus(QWidget):
                 n = len(samples)
                 
                 # Padding for rounded ends and button room
-                x_start = 25
+                x_start = 30 # Increased to avoid overlap with icons
                 x_end = self.width() - 35
                 w_avail = x_end - x_start
                 
@@ -298,20 +308,37 @@ class FloatingStatus(QWidget):
         font.setPointSize(8) # small emoji size
         painter.setFont(font)
         
-        # Left Margin
-        margin_left = 8
+        # Icons Margin - Moved inside to avoid being on the rounded edge
+        margin_left = 15
         
         if self.remote_enabled:
-            # Opacity depends on health
-            painter.setOpacity(0.9 if self.remote_healthy else 0.3)
-            # ☁️
-            rect_top = QRect(margin_left, 4, 16, 12)
-            painter.drawText(rect_top, Qt.AlignLeft | Qt.AlignTop, "☁")
+            rect_top = QRect(margin_left, 6, 16, 12)
+            if self.remote_healthy:
+                painter.setOpacity(0.9)
+                painter.setPen(QColor(255, 255, 255, 220))
+                painter.drawText(rect_top, Qt.AlignLeft | Qt.AlignTop, "☁")
+            else:
+                # Crossed-out Cloud ☁️
+                painter.setOpacity(1.0)
+                # Draw dimmed cloud
+                painter.setPen(QColor(255, 255, 255, 80))
+                painter.drawText(rect_top, Qt.AlignLeft | Qt.AlignTop, "☁")
+                
+                # Draw red cross over it
+                painter.setPen(QColor(255, 50, 50, 200))
+                line_pen = painter.pen()
+                line_pen.setWidth(2)
+                painter.setPen(line_pen)
+                
+                # Cross lines
+                painter.drawLine(margin_left + 2, 8, margin_left + 14, 18)
+                painter.drawLine(margin_left + 2, 18, margin_left + 14, 8)
             
         if self.local_enabled:
             painter.setOpacity(0.8)
+            painter.setPen(QColor(255, 255, 255, 220))
             # 💻
-            rect_bottom = QRect(margin_left, self.height() - 16, 16, 12)
+            rect_bottom = QRect(margin_left, self.height() - 18, 16, 12)
             painter.drawText(rect_bottom, Qt.AlignLeft | Qt.AlignBottom, "💻")
             
         painter.restore()

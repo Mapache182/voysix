@@ -187,22 +187,35 @@ Voysix uses **GitHub Actions** for automated building and quality assurance:
 
 ---
 
-## 📦 Building Standalone Version
+## 📦 Building Standalone Version (Unified Process)
 
-To build the Windows version (EXE + installer), an automated script is provided:
+Voysix uses a **unified build system**. Whether you are building locally for testing or the GitHub Actions pipeline is building a release, the exact same logic is used via `build_dist.py`.
 
+### Prerequisites for Local Build
+- **Python 3.10+**: Make sure you have the dependencies installed (`pip install -r requirements.txt`).
+- **Inno Setup 6**: Required to generate the final `.exe` installer. It must be installed at `C:\Program Files (x86)\Inno Setup 6\ISCC.exe`.
+
+### How to Build
 1. Navigate to the app directory: `cd App`
-2. Run the build script:
+2. Run the unified build script:
    ```bash
    python build_dist.py
    ```
+   *Note: You can optionally pass a specific version: `python build_dist.py 4.5.0`*
 
-**What this script does:**
-- Automatically increments the version (patch) in `version.txt`, `main.py`, and `setup.py`.
-- Compiles Python code into an `.exe` using **cx_Freeze**.
-- Generates a final installer using **Inno Setup**.
+### What happens during build?
+The `build_dist.py` script performs the following steps in sequence:
+1. **Version Sync**: Increments the patch version in `version.txt` and synchronizes it across `main.py`, `setup.py`, and the installer script.
+2. **Binary Freezing**: Invokes `cx_Freeze` via `setup.py` to compile Python code into a standalone directory.
+   - *Result folder:* `App/build/exe.win-amd64-<version>/`
+3. **Installer Creation**: Invokes **Inno Setup** to pack the frozen directory into a single optimized Setup file.
+   - *Final result:* `App/dist/Voysix_Setup.exe`
 
-The result will be available at: `App/dist/Voysix_Setup.exe`.
+### CI/CD Integration
+When you push a tag starting with `app-v*` (e.g., `app-v4.4.78`), GitHub Actions will:
+1. Spin up a Windows runner.
+2. Run the exact same `python build_dist.py` command.
+3. Automatically attach the resulting `Voysix_Setup.exe` to a new GitHub Release.
 
 ---
 

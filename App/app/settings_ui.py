@@ -471,6 +471,15 @@ class SettingsDialog(QDialog):
         self.remote_engine_cb.setCurrentIndex(idx if idx >= 0 else 0)
         self.add_info_row(form, "engine", self.remote_engine_cb, "engine")
 
+        # Remote Audio Format
+        self.remote_audio_format_cb = QComboBox()
+        self.remote_audio_format_cb.addItem("FLAC (Lossless, Rec.)", "flac")
+        self.remote_audio_format_cb.addItem("OGG Vorbis (High Compress)", "ogg")
+        self.remote_audio_format_cb.addItem("WAV (Uncompressed)", "wav")
+        idx = self.remote_audio_format_cb.findData(self.config.get("remote_audio_format", "flac"))
+        self.remote_audio_format_cb.setCurrentIndex(idx if idx >= 0 else 0)
+        self.add_info_row(form, "Audio Format", self.remote_audio_format_cb, "audio_format")
+
         # Remote Model
         self.remote_model_cb = QComboBox()
         self.remote_model_cb.addItems(["tiny", "base", "small", "medium", "large", "distil-large-v3"])
@@ -747,6 +756,7 @@ class SettingsDialog(QDialog):
         # New remote-specific transcription settings
         self.config["remote_model_name"] = self.remote_model_cb.currentText()
         self.config["remote_engine"] = self.remote_engine_cb.currentData()
+        self.config["remote_audio_format"] = self.remote_audio_format_cb.currentData()
         self.config["remote_language"] = self.remote_lang_cb.currentData()
         self.config["remote_beam_size"] = self.remote_beam_size_sb.value()
         self.config["remote_temperature"] = self.remote_temp_sb.value()

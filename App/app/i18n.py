@@ -79,7 +79,8 @@ TRANSLATIONS = {
         "hallucination_silence_threshold": "Hallucination Threshold:",
         "repetition_penalty": "Repetition Penalty:",
         "no_repeat_ngram_size": "No-Repeat N-gram Size:",
-        "clear": "Clear"
+        "clear": "Clear",
+        "worker_offline_tooltip": "Remote worker is offline or unreachable via Tailscale"
     },
     "ru": {
         "ready": "Готов",
@@ -161,7 +162,8 @@ TRANSLATIONS = {
         "hallucination_silence_threshold": "Порог галлюцинаций:",
         "repetition_penalty": "Штраф за повторы:",
         "no_repeat_ngram_size": "Запрет повторов N-грамм:",
-        "clear": "Очистить"
+        "clear": "Очистить",
+        "worker_offline_tooltip": "Удалённый воркер не в сети или недоступен через Tailscale"
     },
     "es": {
         "ready": "Listo",

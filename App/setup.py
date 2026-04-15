@@ -14,18 +14,29 @@ except ImportError:
 sys.setrecursionlimit(5000)
 
 # --- Dependencies ---
+# Attempt to find PySide6 plugins directory
+import PySide6.QtCore
+pyside6_dir = os.path.dirname(PySide6.QtCore.__file__)
+plugins_dir = os.path.join(pyside6_dir, "plugins")
+
+import shiboken6
+shiboken_dir = os.path.dirname(shiboken6.__file__)
+
 build_exe_options = {
     "packages": [
         "os", "sys", "whisper", "faster_whisper", "huggingface_hub", "tokenizers", 
         "sounddevice", "numpy", "pynput", "pyautogui", "pyperclip", "threading", 
-        "PySide6", "torch", "json", "ctypes", "pycaw", "comtypes", "psutil", 
+        "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets",
+        "torch", "json", "ctypes", "pycaw", "comtypes", "psutil", 
         "requests", "chardet", "idna", "certifi", "soundfile"
     ],
     "include_files": [
         ("app", "app"),
         ("assets", "assets"),
         ("version.txt", "version.txt"),
+        (shiboken_dir, "lib/shiboken6"), # Manually include shiboken files
     ],
+    "include_msvcr": True,
     "excludes": [
         "tkinter",
         "pydoc",
@@ -35,6 +46,9 @@ build_exe_options = {
     "zip_include_packages": [],
     "zip_exclude_packages": ["*"],
 }
+
+if os.path.exists(plugins_dir):
+    build_exe_options["include_files"].append((plugins_dir, "lib/PySide6/plugins"))
 
 # --- Try to find sounddevice data folder dynamically ---
 try:
@@ -52,7 +66,7 @@ if sys.platform == "win32":
 
 setup(
     name="Voysix",
-    version="4.4.78",
+    version="4.4.88",
     description="Voysix Application (Speech-to-Text)",
     options={
         "build_exe": build_exe_options

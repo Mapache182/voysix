@@ -1,12 +1,26 @@
 import sys
 import os
+import subprocess
 from cx_Freeze import setup, Executable
+
+# --- Auto-fix environment ---
+try:
+    import chardet
+except ImportError:
+    print("Installing missing dependency: chardet...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "chardet"])
+    import chardet
 
 sys.setrecursionlimit(5000)
 
 # --- Dependencies ---
 build_exe_options = {
-    "packages": ["os", "sys", "whisper", "faster_whisper", "huggingface_hub", "tokenizers", "sounddevice", "numpy", "pynput", "pyautogui", "pyperclip", "threading", "PySide6", "torch", "json", "ctypes", "pycaw", "comtypes", "psutil", "requests"],
+    "packages": [
+        "os", "sys", "whisper", "faster_whisper", "huggingface_hub", "tokenizers", 
+        "sounddevice", "numpy", "pynput", "pyautogui", "pyperclip", "threading", 
+        "PySide6", "torch", "json", "ctypes", "pycaw", "comtypes", "psutil", 
+        "requests", "chardet", "idna", "certifi", "soundfile"
+    ],
     "include_files": [
         ("app", "app"),
         ("assets", "assets"),
@@ -38,7 +52,7 @@ if sys.platform == "win32":
 
 setup(
     name="Voysix",
-    version="4.4.69",
+    version="4.4.78",
     description="Voysix Application (Speech-to-Text)",
     options={
         "build_exe": build_exe_options

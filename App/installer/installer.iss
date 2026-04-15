@@ -3,7 +3,7 @@
 [Setup]
 AppId={{8B5067E6-764E-4643-98C3-D56C9F9444B3}}
 AppName=Voysix
-AppVersion=4.4.69
+AppVersion=4.4.78
 AppPublisher=Voysix
 DefaultDirName={autopf}\Voysix
 DefaultGroupName=Voysix

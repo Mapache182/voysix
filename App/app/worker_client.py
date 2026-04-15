@@ -356,23 +356,43 @@ class WorkerClient:
             headers = self._get_headers()
             requests.post(f"{self.base_url}/config", json=worker_cfg, headers=headers, timeout=2)
 
-            # 🔹 Convert numpy to WAV bytes (Packaging)
+            # 🔹 Convert numpy to bytes (Packaging)
+            from app.settings import load_config
+            cfg = load_config()
+            audio_format = cfg.get("remote_audio_format", "flac")
+
             t_pkg_start = time.time()
             wav_buf = io.BytesIO()
-            with wave.open(wav_buf, "wb") as wf:
-                wf.setnchannels(1)
-                wf.setsampwidth(2) # 16-bit
-                wf.setframerate(16000)
-                # Convert float32 to int16
-                audio_int16 = np.clip(audio_np * 32767, -32768, 32767).astype(np.int16)
-                wf.writeframes(audio_int16.tobytes())
+            
+            # Try compression if selected
+            success = False
+            if audio_format in ["flac", "ogg"]:
+                try:
+                    import soundfile as sf
+                    sf.write(wav_buf, audio_np, 16000, format=audio_format.upper())
+                    success = True
+                except Exception as e:
+                    print(f"DEBUG: Failed to encode {audio_format}, falling back to wav: {e}")
+                    
+            if not success:
+                audio_format = "wav" # Fallback
+                wav_buf = io.BytesIO() # Reset buffer
+                with wave.open(wav_buf, "wb") as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2) # 16-bit
+                    wf.setframerate(16000)
+                    audio_int16 = np.clip(audio_np * 32767, -32768, 32767).astype(np.int16)
+                    wf.writeframes(audio_int16.tobytes())
+
             wav_buf.seek(0)
             t_pkg_dur = time.time() - t_pkg_start
-            print(f"DEBUG: Audio packaging took {t_pkg_dur:.3f}s")
+            print(f"DEBUG: Audio packaging ({audio_format}) took {t_pkg_dur:.3f}s. Size: {len(wav_buf.getvalue())/1024:.1f} KB")
 
             # 🔹 Sending to /transcribe (Network + Backend Processing)
             t_net_start = time.time()
-            files = {"file": ("audio.wav", wav_buf, "audio/wav")}
+            # We always send the file named "audio.wav" to safely bypass backend extension checks, 
+            # ffmpeg under the hood will read the magic header bytes and decode it correctly regardless!
+            files = {"file": ("audio.wav", wav_buf, f"audio/{audio_format}")}
             resp = requests.post(f"{self.base_url}/transcribe", files=files, headers=headers, timeout=120)
             t_net_dur = time.time() - t_net_start
             

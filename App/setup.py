@@ -11,6 +11,13 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "chardet"])
     import chardet
 
+try:
+    import soundfile
+except ImportError:
+    print("Installing missing dependency: soundfile...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "soundfile"])
+    import soundfile
+
 sys.setrecursionlimit(5000)
 
 # --- Dependencies ---
@@ -66,7 +73,7 @@ if sys.platform == "win32":
 
 setup(
     name="Voysix",
-    version="4.4.88",
+    version="4.4.90",
     description="Voysix Application (Speech-to-Text)",
     options={
         "build_exe": build_exe_options

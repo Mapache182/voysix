@@ -375,9 +375,16 @@ class WorkerClient:
                 try:
                     os.close(tmp_fd)
                     import soundfile as sf
-                    # Ensure data is in a format soundfile likes (float32, C-contiguous)
-                    data_to_write = np.ascontiguousarray(audio_np, dtype=np.float32)
-                    sf.write(tmp_path, data_to_write, 16000, format=audio_format.upper())
+                    # Ensure data is in a format soundfile likes (int16 avoids some internal libsndfile stack usage)
+                    data_int16 = np.clip(audio_np * 32767, -32768, 32767).astype(np.int16)
+                    
+                    # Use a context manager and chunked write to minimize stack depth during any single call
+                    # On Windows, libsndfile 1.2.x can crash with Stack Overflow (0xc00000fd)
+                    # especially when handling float32 or large continuous blocks.
+                    with sf.SoundFile(tmp_path, mode='w', samplerate=16000, channels=1, format=audio_format.upper()) as f:
+                        chunk_size = 16000 # 1 second chunks
+                        for i in range(0, len(data_int16), chunk_size):
+                            f.write(data_int16[i:i+chunk_size])
                     
                     with open(tmp_path, "rb") as f:
                         wav_buf.write(f.read())
@@ -410,7 +417,8 @@ class WorkerClient:
             # We always send the file named "audio.wav" to safely bypass backend extension checks, 
             # ffmpeg under the hood will read the magic header bytes and decode it correctly regardless!
             files = {"file": ("audio.wav", wav_buf, f"audio/{audio_format}")}
-            resp = requests.post(f"{self.base_url}/transcribe", files=files, headers=headers, timeout=120)
+            # (connect_timeout, read_timeout)
+            resp = requests.post(f"{self.base_url}/transcribe", files=files, headers=headers, timeout=(3, 60))
             t_net_dur = time.time() - t_net_start
             
             if resp.status_code == 200:
@@ -419,8 +427,10 @@ class WorkerClient:
                 return text
             else:
                 print(f"DEBUG: Remote request failed after {t_net_dur:.3f}s with status {resp.status_code}")
-                return f"Worker error: {resp.text}"
+                return f"Worker error: {resp.status_code}"
         except requests.exceptions.Timeout:
-             return "Remote transcription error: Connection timed out. The worker might be busy or model loading is taking too long."
+             return "Remote transcription error: Connection timed out. Falling back."
+        except requests.exceptions.ConnectionError:
+             return "Remote transcription error: Connection failed. Falling back."
         except Exception as e:
             return f"Remote transcription error: {e}"

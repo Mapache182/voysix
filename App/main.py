@@ -43,7 +43,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.88"
+        self.version = "4.4.90"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:
@@ -144,7 +144,7 @@ class AppController(QObject):
         # Periodic discovery for remote worker
         self.discovery_timer = QTimer(self)
         self.discovery_timer.timeout.connect(self._background_discovery)
-        self.discovery_timer.start(60000) # Check every 60 seconds
+        self.discovery_timer.start(10000) # Check every 10 seconds
         
         # Initial check
         QTimer.singleShot(2000, self._background_discovery)
@@ -308,14 +308,12 @@ class AppController(QObject):
             print(f"Transcription started for {len(audio)/16000:.2f}s of audio...")
             self.abort_transcription = False # Reset flag at start
             
-            # --- Engine Selection Logic ---
+            # --- 1. Engine Selection & Setup ---
             transcriber = None
-            is_available = False
+            is_remote_available = False
             
             if self.config.get("remote_mode", False):
                 from app.transcriber import RemoteWhisperTranscriber
-                
-                # Check for discoverable worker
                 remote = RemoteWhisperTranscriber(
                     self.config.get("remote_worker_name", "voysix-worker"),
                     api_key=self.config.get("remote_api_key", ""),
@@ -326,123 +324,97 @@ class AppController(QObject):
                 if self.worker_url:
                     remote.client.base_url = self.worker_url
                 
-                # Crucial Check: Verify if remote worker is actually ONLINE and HEALTHY
-                # This prevents sending large audio blobs to a dead endpoint
-                is_available = False
+                # Verify if remote worker is ONLINE and HEALTHY
                 if remote.client.base_url:
                     print(f"Verifying remote worker health at {remote.client.base_url}...")
                     if remote.client.check_health():
-                        is_available = True
+                        is_remote_available = True
                 
                 # If cached URL is invalid, try new discovery
-                if not is_available:
+                if not is_remote_available:
                     print("Remote worker status uncertain. Attempting discovery...")
                     if remote.load_model(): # load_model calls discover()
                         if remote.client.check_health():
-                            is_available = True
+                            is_remote_available = True
                             self.worker_url = remote.client.base_url
                 
                 self.engine_state_changed.emit(
                     self.config.get("remote_mode", False),
                     self.config.get("local_whisper_enabled", True),
-                    is_available
+                    is_remote_available
                 )
                 
-                if is_available:
+                if is_remote_available:
                     transcriber = remote
-                    print(f"✅ Using REMOTE transcriber (worker at {remote.client.base_url})")
+                    print(f"✅ Selected REMOTE transcriber (worker at {remote.client.base_url})")
                 else:
-                    if self.config.get("local_whisper_enabled", True):
-                        print("⚠️ Remote worker NOT REACHABLE. Falling back to LOCAL.")
-                        transcriber = self.transcriber
-                        # 🔹 Ensure local model is loaded if we fall back
-                        if transcriber.model is None:
-                            print("Local model not loaded, loading now...")
-                            self.status_changed.emit("loading")
-                            transcriber.load_model(self.config["model_name"], self.config.get("engine", "openai-whisper"))
-                            self.status_changed.emit("processing")
-                    else:
-                        print("❌ Remote worker NOT REACHABLE and LOCAL fallback is DISABLED.")
+                    print("⚠️ Remote worker NOT REACHABLE.")
+                    self.worker_url = None # Reset cached URL if it failed health check
             
-            # If not in remote mode, or remote failed and fallback was disabled/checked later
-            if transcriber is None:
+            # --- 2. Transcription Execution with Fallback ---
+            text = None
+            
+            if transcriber:
+                # TRY REMOTE
+                params = self._get_transcription_params(is_remote=True)
+                print(f"Attempting REMOTE transcription...")
+                text = transcriber.transcribe(
+                    audio, 
+                    cancellation_callback=lambda: self.abort_transcription,
+                    **params
+                )
+                
+                # If remote failed with a specific error (not None/Cancelled), 
+                # we treat it as failure and immediately trigger local fallback.
+                is_remote_error = False
+                if isinstance(text, str):
+                    err_markers = ["error", "timed out", "not connected", "failed", "worker error"]
+                    if any(m in text.lower() for m in err_markers):
+                        is_remote_error = True
+                
+                if is_remote_error:
+                    print(f"❌ Remote transcription FAILED: {text}")
+                    print("🔄 FALLING BACK to local processing immediately.")
+                    text = None # Clear result to trigger fallback below
+                    self.worker_url = None # Reset cached URL
+                    self.engine_state_changed.emit(self.config.get("remote_mode", False), self.config.get("local_whisper_enabled", True), False)
+
+            # FALLBACK to Local if Remote failed or wasn't available
+            if text is None and not self.abort_transcription:
                 if self.config.get("local_whisper_enabled", True):
+                    print("ℹ️ Falling back to LOCAL transcriber...")
                     transcriber = self.transcriber
                     if transcriber.model is None:
                         print("Local model not loaded, loading now...")
                         self.status_changed.emit("loading")
                         transcriber.load_model(self.config["model_name"], self.config.get("engine", "openai-whisper"))
                         self.status_changed.emit("processing")
+                    
+                    params = self._get_transcription_params(is_remote=False)
+                    text = transcriber.transcribe(
+                        audio, 
+                        cancellation_callback=lambda: self.abort_transcription,
+                        **params
+                    )
                 else:
                     print("❌ No transcription engine available (Local Whisper is DISABLED).")
                     self.status_changed.emit("idle")
                     return
 
-            # 🔹 Select appropriate parameters for local or remote mode
-            if self.config.get("remote_mode", False) and is_available:
-                lang = self.config.get("remote_language", "auto")
-                model = self.config.get("remote_model_name", "base")
-                engine = self.config.get("remote_engine", "openai-whisper")
-                beam = self.config.get("remote_beam_size", 5)
-                temp = self.config.get("remote_temperature", 0.0)
-                prompt = self.config.get("remote_initial_prompt", "")
-                no_speech = self.config.get("remote_no_speech_threshold", 0.6)
-                logprob = self.config.get("remote_logprob_threshold", -1.0)
-                compression = self.config.get("remote_compression_ratio_threshold", 2.4)
-                condition = self.config.get("remote_condition_on_previous_text", True)
-                silence_thr = self.config.get("remote_hallucination_silence_threshold", 2.0)
-                rep_pen = self.config.get("remote_repetition_penalty", 1.0)
-                no_repeat_ngram = self.config.get("remote_no_repeat_ngram_size", 0)
-                
-                # Selection of replacements and normalization
-                repl_str = self.config.get("remote_word_replacements", "")
-                smart_norm = self.config.get("remote_smart_normalization", False)
-            else:
-                lang = self.config.get("language", "auto")
-                model = self.config.get("model_name", "base")
-                engine = self.config.get("engine", "openai-whisper")
-                beam = self.config.get("beam_size", 5)
-                temp = self.config.get("temperature", 0.0)
-                prompt = self.config.get("initial_prompt", "")
-                no_speech = self.config.get("no_speech_threshold", 0.6)
-                logprob = self.config.get("logprob_threshold", -1.0)
-                compression = self.config.get("compression_ratio_threshold", 2.4)
-                condition = self.config.get("condition_on_previous_text", True)
-                silence_thr = self.config.get("hallucination_silence_threshold", 2.0)
-                rep_pen = self.config.get("repetition_penalty", 1.0)
-                no_repeat_ngram = self.config.get("no_repeat_ngram_size", 0)
-                
-                repl_str = self.config.get("word_replacements", "")
-                smart_norm = self.config.get("smart_normalization", False)
-
-            text = transcriber.transcribe(
-                audio, 
-                model_name=model,
-                engine=engine,
-                language=lang,
-                beam_size=beam,
-                temperature=temp,
-                initial_prompt=prompt,
-                no_speech_threshold=no_speech,
-                logprob_threshold=logprob,
-                compression_ratio_threshold=compression,
-                condition_on_previous_text=condition,
-                hallucination_silence_threshold=silence_thr,
-                repetition_penalty=rep_pen,
-                no_repeat_ngram_size=no_repeat_ngram,
-                smart_normalization=smart_norm,
-                word_replacements=repl_str,
-                cancellation_callback=lambda: self.abort_transcription
-            )
             
             if text is None:
                 print("Transcription cancelled, skipping output.")
                 self.status_changed.emit("idle")
                 return
             
-            # 🔹 Post-processing (still applied here for safety or for local mode)
-            # If it was remote, the worker already did it, but doing it again with same rules is idempotent.
+            # 🔹 3. Result Post-processing ---
             from app.utils import apply_replacements, apply_smart_normalization
+            
+            # Use appropriate replacements/normalization rule set
+            is_remote_final = self.config.get("remote_mode", False) and is_remote_available
+            params = self._get_transcription_params(is_remote=is_remote_final)
+            repl_str = params["word_replacements"]
+            smart_norm = params["smart_normalization"]
             
             text = apply_replacements(text, repl_str)
             if smart_norm:
@@ -452,6 +424,7 @@ class AppController(QObject):
             print(f"--- Performance Report ---")
             print(f"Audio Length: {len(audio)/16000:.2f}s")
             print(f"Processing Time: {trans_dur:.2f}s (Total)")
+            print(f"Source: {'REMOTE' if is_remote_final else 'LOCAL'}")
             print(f"Recognized: '{text}'")
             print(f"--------------------------")
             
@@ -468,9 +441,50 @@ class AppController(QObject):
             )
         except Exception as e:
             print(f"Process Audio Error: {e}")
+            import traceback
+            traceback.print_exc()
             self.status_changed.emit("idle")
         finally:
             self.last_action_time = time.time()
+
+    def _get_transcription_params(self, is_remote):
+        """Helper to get a dictionary of parameters based on engine mode."""
+        if is_remote:
+            return {
+                "language": self.config.get("remote_language", "auto"),
+                "model_name": self.config.get("remote_model_name", "base"),
+                "engine": self.config.get("remote_engine", "openai-whisper"),
+                "beam_size": self.config.get("remote_beam_size", 5),
+                "temperature": self.config.get("remote_temperature", 0.0),
+                "initial_prompt": self.config.get("remote_initial_prompt", ""),
+                "no_speech_threshold": self.config.get("remote_no_speech_threshold", 0.6),
+                "logprob_threshold": self.config.get("remote_logprob_threshold", -1.0),
+                "compression_ratio_threshold": self.config.get("remote_compression_ratio_threshold", 2.4),
+                "condition_on_previous_text": self.config.get("remote_condition_on_previous_text", True),
+                "hallucination_silence_threshold": self.config.get("remote_hallucination_silence_threshold", 2.0),
+                "repetition_penalty": self.config.get("remote_repetition_penalty", 1.0),
+                "no_repeat_ngram_size": self.config.get("remote_no_repeat_ngram_size", 0),
+                "word_replacements": self.config.get("remote_word_replacements", ""),
+                "smart_normalization": self.config.get("remote_smart_normalization", False)
+            }
+        else:
+            return {
+                "language": self.config.get("language", "auto"),
+                "model_name": self.config.get("model_name", "base"),
+                "engine": self.config.get("engine", "openai-whisper"),
+                "beam_size": self.config.get("beam_size", 5),
+                "temperature": self.config.get("temperature", 0.0),
+                "initial_prompt": self.config.get("initial_prompt", ""),
+                "no_speech_threshold": self.config.get("no_speech_threshold", 0.6),
+                "logprob_threshold": self.config.get("logprob_threshold", -1.0),
+                "compression_ratio_threshold": self.config.get("compression_ratio_threshold", 2.4),
+                "condition_on_previous_text": self.config.get("condition_on_previous_text", True),
+                "hallucination_silence_threshold": self.config.get("hallucination_silence_threshold", 2.0),
+                "repetition_penalty": self.config.get("repetition_penalty", 1.0),
+                "no_repeat_ngram_size": self.config.get("no_repeat_ngram_size", 0),
+                "word_replacements": self.config.get("word_replacements", ""),
+                "smart_normalization": self.config.get("smart_normalization", False)
+            }
 
     def check_idle(self):
         if not self.config.get("unload_idle", False):
@@ -697,6 +711,7 @@ class AppController(QObject):
         os._exit(0)
 
 def main():
+    sys.setrecursionlimit(5000)
     # --- Single Instance Check (Windows) ---
     if os.name == 'nt':
         mutex_name = "VoysixAppInstanceMutex_Unique_2025"

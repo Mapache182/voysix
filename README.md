@@ -181,7 +181,7 @@ docker run -d --name voysix-worker \
 ## 🔄 Automated CI/CD
 
 Voysix uses **GitHub Actions** for automated building and quality assurance:
-- **`worker-v*`** tags: Automatically builds the Docker image and pushes to both **GitHub Container Registry (GHCR)** and **Docker Hub**.
+- **`worker-v*`** tags: Automatically builds the Docker image and pushes to **Docker Hub**.
 - **`app-v*`** tags: Automatically compiles the Windows Setup EXE installer and creates a GitHub Release.
 
 

@@ -213,6 +213,14 @@ class SettingsDialog(QDialog):
         self.design_cb.setCurrentIndex(max(0, self.design_cb.findData(self.config.get("ui_design", "classic"))))
         self.add_info_row(form, "ui_design", self.design_cb, "ui_design")
 
+        # Logging level
+        self.log_level_cb = QComboBox()
+        self.log_level_cb.addItem(tr("log_none"), "none")
+        self.log_level_cb.addItem(tr("log_info"), "info")
+        self.log_level_cb.addItem(tr("log_debug"), "debug")
+        self.log_level_cb.setCurrentIndex(max(0, self.log_level_cb.findData(self.config.get("log_level", "info"))))
+        self.add_info_row(form, "log_level", self.log_level_cb, "log_level_help")
+
         # Mic
         self.mic_cb = QComboBox()
         self.mic_cb.addItem(tr("default_mic"), None)
@@ -721,6 +729,7 @@ class SettingsDialog(QDialog):
         self.config["always_on_top"] = self.always_on_top_chk.isChecked()
         self.config["ui_design"] = self.design_cb.currentData()
         self.config["use_gpu"] = self.use_gpu_chk.isChecked()
+        self.config["log_level"] = self.log_level_cb.currentData()
         
         # Apply autostart setting
         set_autostart(self.config["autostart"])

@@ -39,7 +39,7 @@ class AudioRecorder:
             if self.stream is None:
                 self._start_stream(device)
             
-            print(f"Recorder ACTIVE (pre-buffer contains {len(self.audio_data)} chunks).")
+            print(f"DEBUG: Recorder ACTIVE (pre-buffer contains {len(self.audio_data)} chunks).")
 
     def _start_stream(self, device=None):
         """Low-level stream initialization with fallbacks."""
@@ -75,7 +75,7 @@ class AudioRecorder:
                         self.stream.start()
                         self.samplerate = rate
                         self.channels = ch
-                        print(f"Stream started successfully at {rate}Hz, {ch}ch.")
+                        print(f"DEBUG: Stream started successfully at {rate}Hz, {ch}ch.")
                         return # Success
                     except Exception as e:
                         # Only print if it's not the initial 16k mono attempt or if we are already failing
@@ -89,7 +89,7 @@ class AudioRecorder:
     def _callback(self, indata, frames, time, status):
         try:
             if status:
-                print(f"Recorder Status: {status}")
+                print(f"DEBUG: Recorder Status: {status}")
             
             data_copy = indata.copy()
             # Downmix to mono if stereo
@@ -126,7 +126,7 @@ class AudioRecorder:
                 result_list = list(self.audio_data)
                 self.audio_data = []
 
-            print("Recorder STOPPED (active phase).")
+            print("DEBUG: Recorder STOPPED (active phase).")
             
             # 🔹 If we don't need pre-recording, we should close the stream to release the mic
             if self.pre_buffer_max_frames <= 0:

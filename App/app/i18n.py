@@ -80,7 +80,11 @@ TRANSLATIONS = {
         "repetition_penalty": "Repetition Penalty:",
         "no_repeat_ngram_size": "No-Repeat N-gram Size:",
         "clear": "Clear",
-        "worker_offline_tooltip": "Remote worker is offline or unreachable via Tailscale"
+        "worker_offline_tooltip": "Remote worker is offline or unreachable via Tailscale",
+        "log_level": "Logging level:",
+        "log_none": "Silent (No logs)",
+        "log_info": "Info (Alerts)",
+        "log_debug": "Debug (Full)"
     },
     "ru": {
         "ready": "Готов",
@@ -163,7 +167,11 @@ TRANSLATIONS = {
         "repetition_penalty": "Штраф за повторы:",
         "no_repeat_ngram_size": "Запрет повторов N-грамм:",
         "clear": "Очистить",
-        "worker_offline_tooltip": "Удалённый воркер не в сети или недоступен через Tailscale"
+        "worker_offline_tooltip": "Удалённый воркер не в сети или недоступен через Tailscale",
+        "log_level": "Уровень логирования:",
+        "log_none": "Отключено (Тишина)",
+        "log_info": "Инфо (Алерты)",
+        "log_debug": "Дебаг (Полный)"
     },
     "es": {
         "ready": "Listo",
@@ -273,7 +281,8 @@ HELP_TEXT = {
         "compression": "<b>Compression Threshold:</b><br>If the compression ratio is higher than this, the segment is considered repetitive/low quality. Default is 2.4.",
         "hallucination": "<b>Hallucination Threshold:</b><br>Silence threshold (seconds) for hallucination detection. High values reduce 'loops'.",
         "repetition": "<b>Repetition Penalty:</b><br>Penalty for repeating same tokens. Helps with loops in Faster-Whisper.",
-        "no_repeat": "<b>No-Repeat N-gram:</b><br>Prevents repeating same word sequences of this length."
+        "no_repeat": "<b>No-Repeat N-gram:</b><br>Prevents repeating same word sequences of this length.",
+        "log_level_help": "<b>Logging Level:</b><br>Silent: No logs in the log window.<br>Info: Only important events (connection/errors) are shown.<br>Debug: Everything is shown (useful for troubleshooting)."
     },
     "ru": {
         "model": "<b>Модель Whisper:</b><br>'tiny' — самая быстрая, 'large' — самая точная. 'base' рекомендуется для большинства.",
@@ -311,7 +320,8 @@ HELP_TEXT = {
         "compression": "<b>Порог сжатия:</b><br>Если текст слишком сильно сжимается (подозрение на повторы), он будет отброшен. Стандарт: 2.4.",
         "hallucination": "<b>Порог галлюцинаций:</b><br>Длительность тишины (сек), после которой модель может начать 'выдумывать' текст. Помогает убрать эхо.",
         "repetition": "<b>Штраф за повторы:</b><br>Коэффициент наказания за одинаковые токены. Эффективно против зацикливания.",
-        "no_repeat": "<b>Запрет N-грамм:</b><br>Запрещает повторение последовательностей слов указанной длины."
+        "no_repeat": "<b>Запрет N-грамм:</b><br>Запрещает повторение последовательностей слов указанной длины.",
+        "log_level_help": "<b>Уровень логирования:</b><br>Отключено: В окне логов ничего не отображается.<br>Инфо: Отображаются только важные события (подключение/ошибки).<br>Дебаг: Отображается всё подряд (помогает при поиске проблем)."
     },
     "es": {
         "model": "<b>Modelo Whisper:</b><br>'tiny' es el más rápido, 'large' el más preciso. 'base' se recomienda para la mayoría.",

@@ -68,7 +68,8 @@ DEFAULT_CONFIG = {
     "remote_no_repeat_ngram_size": 0,
     "remote_smart_normalization": False,
     "remote_word_replacements": "",
-    "remote_audio_format": "flac"
+    "remote_audio_format": "flac",
+    "log_level": "info"
 }
 
 def load_config():

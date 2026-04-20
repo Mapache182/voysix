@@ -142,11 +142,11 @@ class WorkerClient:
             dns_name = self_node.get("DNSName", "")
             ips = self_node.get("TailscaleIPs", [])
             
-            print(f"Tailscale Status Check: state='{state}', hostname='{node_name}', IPs='{ips}'")
+            print(f"DEBUG: Tailscale Status Check: state='{state}', hostname='{node_name}', IPs='{ips}'")
 
             # 2. Fallback: if auth_key is None but api_key looks like a TS Key
             if not auth_key and self.api_key and self.api_key.startswith("tskey-"):
-                print("Hint: Using 'Remote API Key' as Tailscale Auth Key (fallback).")
+                print("DEBUG: Hint: Using 'Remote API Key' as Tailscale Auth Key (fallback).")
                 auth_key = self.api_key
 
             # 3. If not running and we have an auth key, try to 'up' it
@@ -221,7 +221,7 @@ class WorkerClient:
             print("Discovery: No worker node name provided.")
             return None
 
-        print(f"Discovery: Searching for worker node '{self.node_name}' in Tailscale network...")
+        print(f"DEBUG: Discovery: Searching for worker node '{self.node_name}' in Tailscale network...")
 
         try:
             # Discover via Tailscale

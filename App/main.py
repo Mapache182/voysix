@@ -55,7 +55,7 @@ class AppController(QObject):
         try:
             current_vol = get_mic_volume()
             set_mic_volume(current_vol)
-            print(f"Self-check: Microphone volume is at {current_vol}% and unmuted.")
+            print(f"DEBUG: Self-check: Microphone volume is at {current_vol}% and unmuted.")
         except Exception as e:
             print(f"Mic poke failed: {e}")
 
@@ -421,12 +421,12 @@ class AppController(QObject):
                 text = apply_smart_normalization(text)
                 
             trans_dur = time.time() - self.transcription_start_time
-            print(f"--- Performance Report ---")
-            print(f"Audio Length: {len(audio)/16000:.2f}s")
-            print(f"Processing Time: {trans_dur:.2f}s (Total)")
-            print(f"Source: {'REMOTE' if is_remote_final else 'LOCAL'}")
-            print(f"Recognized: '{text}'")
-            print(f"--------------------------")
+            print(f"DEBUG: --- Performance Report ---")
+            print(f"DEBUG: Audio Length: {len(audio)/16000:.2f}s")
+            print(f"DEBUG: Processing Time: {trans_dur:.2f}s (Total)")
+            print(f"DEBUG: Source: {'REMOTE' if is_remote_final else 'LOCAL'}")
+            print(f"DEBUG: Recognized: '{text}'")
+            print(f"DEBUG: --------------------------")
             
             self.floating_ui.set_durations(transcription=trans_dur)
             self.transcription_start_time = 0
@@ -669,7 +669,7 @@ class AppController(QObject):
                 # Only log if status changed to avoid "infinite" log spam
                 if not hasattr(self, "_last_ts_connected") or self._last_ts_connected != current_ts_connected:
                     status_str = "ONLINE" if current_ts_connected else "OFFLINE"
-                    print(f"Background Check: Tailscale is {status_str} ({ts['state']})")
+                    print(f"DEBUG: Background Check: Tailscale is {status_str} ({ts['state']})")
                     self._last_ts_connected = current_ts_connected
                 
                 # 2. Worker Discovery

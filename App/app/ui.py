@@ -419,10 +419,33 @@ class LogHandler(io.TextIOBase):
 
     def write(self, text):
         if text:
-            # 1. UI Update (via signal)
+            # 0. Load current config to get log level
+            from app.settings import load_config
+            try:
+                config = load_config()
+                level = config.get("log_level", "info")
+            except:
+                level = "info"
+
+            # 1. Level Filtering
+            if level == "none":
+                return len(text)
+            
+            # For multiline blocks, we check if ANY line should be kept
+            # but usually print() sends one block at a time.
+            clean_text = text.strip()
+            if not clean_text:
+                 # Keep newlines for formatting if they are just separators
+                 pass
+            elif level == "info":
+                # Filter out DEBUG messages
+                if clean_text.upper().startswith("DEBUG") or "[TAILSCALE]" in clean_text.upper():
+                    return len(text)
+
+            # 2. UI Update (via signal)
             self.signal.emit(text)
             
-            # 2. File Update
+            # 3. File Update
             try:
                 with open(self.log_file_path, "a", encoding="utf-8") as f:
                     f.write(text)

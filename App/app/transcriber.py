@@ -44,18 +44,18 @@ class WhisperTranscriber:
             if model_name:
                 # If everything is same, skip
                 if self.model is not None and self.model_name == model_name and (engine is None or self.engine == engine):
-                    print(f"Model {model_name} already loaded, skipping.")
+                    print(f"DEBUG: Model {model_name} already loaded, skipping.")
                     return
                 self.model_name = model_name
             if engine:
                 self.engine = engine
             
-            print(f"--- Model Change Requested: {self.model_name} ({self.engine}) on {self.device} ---")
+            print(f"DEBUG: --- Model Change Requested: {self.model_name} ({self.engine}) on {self.device} ---")
             self.loading = True
             
             # 🔹 1. Explicitly clear previous model to free memory/VRAM
             if self.model is not None:
-                print("Releasing previous model...")
+                print("DEBUG: Releasing previous model...")
                 try:
                     del self.model
                     self.model = None
@@ -66,16 +66,16 @@ class WhisperTranscriber:
                 gc.collect()
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
-                print("Previous model released.")
+                print("DEBUG: Previous model released.")
 
             try:
-                print(f"Loading '{self.model_name}' on {self.device}...")
+                print(f"DEBUG: Loading '{self.model_name}' on {self.device}...")
                 if self.engine == "faster-whisper":
-                    print("Importing faster_whisper...")
+                    print("DEBUG: Importing faster_whisper...")
                     from faster_whisper import WhisperModel
                     
                     compute_type = "float16" if self.device == "cuda" else "float32"
-                    print(f"Initializing Faster-Whisper ({self.model_name}, {compute_type})...")
+                    print(f"DEBUG: Initializing Faster-Whisper ({self.model_name}, {compute_type})...")
                     
                     self.model = WhisperModel(
                         self.model_name, 
@@ -84,15 +84,15 @@ class WhisperTranscriber:
                         download_root=self.download_root
                     )
                 else:
-                    print("Importing openai-whisper...")
+                    print("DEBUG: Importing openai-whisper...")
                     import whisper
-                    print(f"Calling whisper.load_model ({self.model_name})...")
+                    print(f"DEBUG: Calling whisper.load_model ({self.model_name})...")
                     self.model = whisper.load_model(
                         self.model_name, 
                         device=self.device, 
                         download_root=self.download_root
                     )
-                print("Model loaded successfully.")
+                print("DEBUG: Model loaded successfully.")
             except Exception as e:
                 print(f"CRITICAL Error loading model: {e}")
                 self.model = None
@@ -103,7 +103,7 @@ class WhisperTranscriber:
     def unload_model(self):
         with self._lock:
             if self.model is not None:
-                print("Unloading model to free RAM...")
+                print("DEBUG: Unloading model to free RAM...")
                 try:
                     del self.model
                     self.model = None
@@ -113,7 +113,7 @@ class WhisperTranscriber:
                 gc.collect()
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
-                print("Model unloaded successfully.")
+                print("DEBUG: Model unloaded successfully.")
             else:
                 print("Model was not loaded, nothing to unload.")
 
@@ -188,7 +188,7 @@ class RemoteWhisperTranscriber:
 
     def load_model(self, *args, **kwargs):
         # Discovery is fast, but let's do it
-        print(f"Discovering remote worker: {self.client.node_name}...")
+        print(f"DEBUG: Discovering remote worker: {self.client.node_name}...")
         url = self.client.discover()
         if url:
             print(f"Remote worker found at {url}")

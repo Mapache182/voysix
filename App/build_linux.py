@@ -29,6 +29,7 @@ def build_pyinstaller():
         "--icon", "assets/icon.png",
         "--add-data", "assets:assets",
         "--add-data", "app/i18n/*.json:app/i18n",
+        "--exclude-module", "coverage",
         "main.py"
     ]
     subprocess.run(cmd, check=True)

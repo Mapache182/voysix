@@ -5,11 +5,12 @@ import sys
 # which happens in environments where 'coverage' 7.x is installed 
 # and 'numba' (via whisper) tries to access 'coverage.types'.
 try:
-    if 'coverage' in sys.modules:
-        import coverage
-        if not hasattr(coverage, 'types'):
-            coverage.types = type("MockTypes", (), {})
-except:
+    import coverage
+    if not hasattr(coverage, 'types'):
+        coverage.types = type("MockTypes", (), {})
+except ImportError:
+    pass
+except Exception:
     pass
 
 import whisper

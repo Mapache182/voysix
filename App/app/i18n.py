@@ -90,7 +90,7 @@ TRANSLATIONS = {
         "ready": "Готов",
         "loading": "Загрузка...",
         "recording": "Запись",
-        "processing": "Думаю...",
+        "processing": "Загрузка...",
         "done": "Готово!",
         "settings": "Настройки",
         "show_logs": "Логи",

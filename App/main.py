@@ -190,6 +190,7 @@ class AppController(QObject):
                 
             if getattr(self.transcriber, 'loading', False):
                 print("Action blocked: Model is still loading.")
+                self.status_changed.emit("loading")
                 return
                 
             if not self.recorder.recording:

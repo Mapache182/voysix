@@ -1,3 +1,17 @@
+import os
+import sys
+
+# 🔹 Workaround for AttributeError: module 'coverage' has no attribute 'types'
+# which happens in environments where 'coverage' 7.x is installed 
+# and 'numba' (via whisper) tries to access 'coverage.types'.
+try:
+    if 'coverage' in sys.modules:
+        import coverage
+        if not hasattr(coverage, 'types'):
+            coverage.types = type("MockTypes", (), {})
+except:
+    pass
+
 import whisper
 import sounddevice as sd
 import numpy as np

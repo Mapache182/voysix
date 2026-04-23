@@ -85,6 +85,20 @@ class WhisperTranscriber:
                     )
                 else:
                     print("DEBUG: Importing openai-whisper...")
+                    
+                    # 🔹 Workaround for AttributeError: module 'coverage' has no attribute 'types'
+                    # which happens in environments where 'coverage' 7.x is installed 
+                    # and 'numba' tries to access 'coverage.types'.
+                    try:
+                        import sys
+                        if 'coverage' in sys.modules:
+                            import coverage
+                            if not hasattr(coverage, 'types'):
+                                print("DEBUG: Patching 'coverage' module to satisfy numba.")
+                                coverage.types = type("MockTypes", (), {})
+                    except Exception as e:
+                        print(f"DEBUG: Coverage patch failed (non-critical): {e}")
+
                     import whisper
                     print(f"DEBUG: Calling whisper.load_model ({self.model_name})...")
                     self.model = whisper.load_model(

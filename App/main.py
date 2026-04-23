@@ -1,5 +1,12 @@
 import sys
 import os
+
+# 🔹 Fix for numba/coverage conflict:
+# Some environments have a 'coverage' module that lacks 'types', causing numba to crash.
+# We disable coverage entirely for this process as it's not needed at runtime.
+# This must be done BEFORE importing whisper or numba.
+sys.modules['coverage'] = None
+
 # Prioritize local project directory to avoid importing from "Program Files"
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

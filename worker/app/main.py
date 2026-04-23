@@ -1,4 +1,11 @@
 import os
+import sys
+
+# 🔹 Fix for numba/coverage conflict:
+# Some environments have a 'coverage' module that lacks 'types', causing numba to crash.
+# We disable coverage entirely for this process as it's not needed at runtime.
+sys.modules['coverage'] = None
+
 import time
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse

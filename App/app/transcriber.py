@@ -90,12 +90,13 @@ class WhisperTranscriber:
                     # which happens in environments where 'coverage' 7.x is installed 
                     # and 'numba' tries to access 'coverage.types'.
                     try:
-                        import sys
-                        if 'coverage' in sys.modules:
-                            import coverage
-                            if not hasattr(coverage, 'types'):
-                                print("DEBUG: Patching 'coverage' module to satisfy numba.")
-                                coverage.types = type("MockTypes", (), {})
+                        import coverage
+                        if not hasattr(coverage, 'types'):
+                            print("DEBUG: Patching 'coverage' module to satisfy numba.")
+                            coverage.types = type("MockTypes", (), {})
+                    except ImportError:
+                        # Coverage not installed, which is fine
+                        pass
                     except Exception as e:
                         print(f"DEBUG: Coverage patch failed (non-critical): {e}")
 

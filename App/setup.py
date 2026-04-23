@@ -47,7 +47,8 @@ build_exe_options = {
     "excludes": [
         "tkinter",
         "pydoc",
-        "torch.include"
+        "torch.include",
+        "coverage"
     ],
     "optimize": 2,
     "zip_include_packages": [],

@@ -782,7 +782,6 @@ class SettingsDialog(QDialog):
         self.config["remote_language"] = self.remote_lang_cb.currentData()
         self.config["remote_beam_size"] = self.remote_beam_size_sb.value()
         self.config["remote_temperature"] = self.remote_temp_sb.value()
-        self.config["remote_initial_prompt"] = self.remote_prompt_le.text()
         self.config["remote_no_speech_threshold"] = self.remote_no_speech_sb.value()
         self.config["remote_logprob_threshold"] = self.remote_logprob_sb.value()
         self.config["remote_compression_ratio_threshold"] = self.remote_compression_sb.value()
@@ -811,15 +810,19 @@ class SettingsDialog(QDialog):
         if not text: return
         
         if self.prompt_le.text().strip():
-            reply = QMessageBox.question(
-                self, 
-                tr("presets"), 
-                "Replace existing prompt or append?\n\nЗаменить текущую подсказку или добавить в конец?",
-                "Replace", "Append"
-            )
-            if reply == 0: # Replace
+            msg = QMessageBox(self)
+            msg.setWindowTitle(tr("presets"))
+            msg.setText("Replace existing prompt or append?\n\nЗаменить текущую подсказку или добавить в конец?")
+            
+            replace_btn = msg.addButton(tr("replace"), QMessageBox.ActionRole)
+            append_btn = msg.addButton(tr("append"), QMessageBox.ActionRole)
+            msg.addButton(tr("cancel"), QMessageBox.RejectRole)
+            
+            msg.exec()
+            
+            if msg.clickedButton() == replace_btn:
                 self.prompt_le.setText(text)
-            else: # Append
+            elif msg.clickedButton() == append_btn:
                 current = self.prompt_le.text().strip()
                 if not current.endswith(","): current += ","
                 self.prompt_le.setText(f"{current} {text}")

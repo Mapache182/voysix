@@ -84,7 +84,9 @@ TRANSLATIONS = {
         "log_level": "Logging level:",
         "log_none": "Silent (No logs)",
         "log_info": "Info (Alerts)",
-        "log_debug": "Debug (Full)"
+        "log_debug": "Debug (Full)",
+        "presets": "Presets",
+        "apply_preset": "Apply Preset"
     },
     "ru": {
         "ready": "Готов",
@@ -171,7 +173,9 @@ TRANSLATIONS = {
         "log_level": "Уровень логирования:",
         "log_none": "Отключено (Тишина)",
         "log_info": "Инфо (Алерты)",
-        "log_debug": "Дебаг (Полный)"
+        "log_debug": "Дебаг (Полный)",
+        "presets": "Библиотека пресетов",
+        "apply_preset": "Применить"
     },
     "es": {
         "ready": "Listo",
@@ -240,7 +244,9 @@ TRANSLATIONS = {
         "about": "Acerca de",
         "about_title": "Acerca de Voysix",
         "about_text": "Voysix v{version}\n\nVoysix.\nTranscripción de voz a texto con el modelo Whisper local.\n\nFunciones clave:\n- Transcripción de alta precisión\n- Baja latencia\n- Procesamiento local privado",
-        "clear": "Limpiar"
+        "clear": "Limpiar",
+        "presets": "Ajustes predefinidos",
+        "apply_preset": "Aplicar"
     }
 }
 

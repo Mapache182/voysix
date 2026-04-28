@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
     QCheckBox, QPushButton, QDoubleSpinBox, QFormLayout, QSlider, QSpinBox, QLineEdit, QMessageBox,
-    QTabWidget, QWidget, QScrollArea
+    QTabWidget, QWidget, QScrollArea, QMenu
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread
 from PySide6.QtGui import QKeyEvent, QMouseEvent, QIcon
@@ -16,6 +16,7 @@ from app.volume import get_mic_volume, set_mic_volume
 from app.i18n import tr, hlp, set_ui_lang
 from app.autostart import set_autostart, is_autostart_enabled
 from app.gpu_manager import check_gpu_available, GPUDownloadDialog, check_hardware_for_nvidia
+from app.presets import PROMPT_PRESETS, get_preset_text
 
 class ConnectionTester(QThread):
     ts_signal = Signal(bool, str) # connected, state_text
@@ -299,7 +300,28 @@ class SettingsDialog(QDialog):
         self.prompt_le = QLineEdit()
         self.prompt_le.setText(self.config.get("initial_prompt", ""))
         self.prompt_le.setPlaceholderText("Context words...")
-        self.add_info_row(form, "initial_prompt", self.prompt_le, "prompt")
+        
+        # Preset button
+        preset_btn = QPushButton(tr("presets"))
+        preset_btn.setStyleSheet("padding: 2px 8px; font-size: 11px;")
+        preset_btn.clicked.connect(self._show_preset_menu)
+        
+        prompt_layout = QHBoxLayout()
+        prompt_layout.addWidget(self.prompt_le)
+        prompt_layout.addWidget(preset_btn)
+        
+        info_btn = QPushButton("ⓘ")
+        info_btn.setFixedSize(20, 20)
+        info_btn.setStyleSheet("""
+            QPushButton { 
+                border: none; color: #0078d4; font-weight: bold; background: transparent; font-size: 14px;
+            }
+            QPushButton:hover { color: #005a9e; }
+        """)
+        info_btn.clicked.connect(lambda: QMessageBox.information(self, tr("info_title"), hlp("prompt")))
+        prompt_layout.addWidget(info_btn)
+
+        form.addRow(tr("initial_prompt"), prompt_layout)
 
         from PySide6.QtWidgets import QPlainTextEdit
         self.replacements_te = QPlainTextEdit()
@@ -773,6 +795,36 @@ class SettingsDialog(QDialog):
         save_config(self.config)
         set_ui_lang(self.config["ui_language"])
         self.accept()
+
+    def _show_preset_menu(self):
+        menu = QMenu(self)
+        for key, data in PROMPT_PRESETS.items():
+            action = menu.addAction(data["name"])
+            action.triggered.connect(lambda checked=False, k=key: self._apply_preset(k))
+        
+        # Position menu above/below button
+        btn = self.sender()
+        menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
+
+    def _apply_preset(self, key):
+        text = get_preset_text(key)
+        if not text: return
+        
+        if self.prompt_le.text().strip():
+            reply = QMessageBox.question(
+                self, 
+                tr("presets"), 
+                "Replace existing prompt or append?\n\nЗаменить текущую подсказку или добавить в конец?",
+                "Replace", "Append"
+            )
+            if reply == 0: # Replace
+                self.prompt_le.setText(text)
+            else: # Append
+                current = self.prompt_le.text().strip()
+                if not current.endswith(","): current += ","
+                self.prompt_le.setText(f"{current} {text}")
+        else:
+            self.prompt_le.setText(text)
 
     def cancel(self):
         self.vol_timer.stop()

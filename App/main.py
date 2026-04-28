@@ -464,7 +464,7 @@ class AppController(QObject):
                 "engine": self.config.get("remote_engine", "openai-whisper"),
                 "beam_size": self.config.get("remote_beam_size", 5),
                 "temperature": self.config.get("remote_temperature", 0.0),
-                "initial_prompt": self.config.get("remote_initial_prompt", ""),
+                "initial_prompt": self.config.get("initial_prompt", ""),
                 "no_speech_threshold": self.config.get("remote_no_speech_threshold", 0.6),
                 "logprob_threshold": self.config.get("remote_logprob_threshold", -1.0),
                 "compression_ratio_threshold": self.config.get("remote_compression_ratio_threshold", 2.4),
@@ -472,7 +472,7 @@ class AppController(QObject):
                 "hallucination_silence_threshold": self.config.get("remote_hallucination_silence_threshold", 2.0),
                 "repetition_penalty": self.config.get("remote_repetition_penalty", 1.0),
                 "no_repeat_ngram_size": self.config.get("remote_no_repeat_ngram_size", 0),
-                "word_replacements": self.config.get("remote_word_replacements", ""),
+                "word_replacements": self.config.get("word_replacements", ""),
                 "smart_normalization": self.config.get("remote_smart_normalization", False)
             }
         else:

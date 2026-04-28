@@ -293,6 +293,21 @@ class SettingsDialog(QDialog):
         self.cleanup_sb.setValue(self.config.get("backspace_cleanup", 0))
         self.add_info_row(form, "backspace_cleanup", self.cleanup_sb, "backspace_cleanup")
 
+        # --- Processing context (Moved to General) ---
+        form.addRow(QLabel(f"<br><b>{tr('processing_settings')}</b>"), QLabel(""))
+        
+        self.prompt_le = QLineEdit()
+        self.prompt_le.setText(self.config.get("initial_prompt", ""))
+        self.prompt_le.setPlaceholderText("Context words...")
+        self.add_info_row(form, "initial_prompt", self.prompt_le, "prompt")
+
+        from PySide6.QtWidgets import QPlainTextEdit
+        self.replacements_te = QPlainTextEdit()
+        self.replacements_te.setPlaceholderText("word:replacement\nмерч:merch")
+        self.replacements_te.setPlainText(self.config.get("word_replacements", ""))
+        self.replacements_te.setMaximumHeight(80)
+        self.add_info_row(form, "word_replacements", self.replacements_te, "word_replacements")
+
         layout.addLayout(form)
         layout.addStretch()
         self.tabs.addTab(tab, tr("tab_general"))
@@ -349,11 +364,6 @@ class SettingsDialog(QDialog):
         self.temp_sb.setValue(self.config.get("temperature", 0.0))
         self.add_info_row(form, "temperature", self.temp_sb, "temp")
 
-        self.prompt_le = QLineEdit()
-        self.prompt_le.setText(self.config.get("initial_prompt", ""))
-        self.prompt_le.setPlaceholderText("Context words...")
-        self.add_info_row(form, "initial_prompt", self.prompt_le, "prompt")
-
         self.unload_idle_chk = QCheckBox(tr("enabled"))
         self.unload_idle_chk.setChecked(self.config.get("unload_idle", True))
         self.add_info_row(form, "unload_idle", self.unload_idle_chk, "unload_idle")
@@ -405,13 +415,6 @@ class SettingsDialog(QDialog):
         self.smart_normalization_chk = QCheckBox(tr("enabled"))
         self.smart_normalization_chk.setChecked(self.config.get("smart_normalization", False))
         self.add_info_row(form, "smart_normalization", self.smart_normalization_chk, "smart_normalization")
-
-        from PySide6.QtWidgets import QPlainTextEdit
-        self.replacements_te = QPlainTextEdit()
-        self.replacements_te.setPlaceholderText("word:replacement\nмерч:merch")
-        self.replacements_te.setPlainText(self.config.get("word_replacements", ""))
-        self.replacements_te.setMaximumHeight(80)
-        self.add_info_row(form, "word_replacements", self.replacements_te, "word_replacements")
 
         layout.addLayout(form)
         layout.addStretch()
@@ -515,11 +518,6 @@ class SettingsDialog(QDialog):
         self.remote_temp_sb.setValue(self.config.get("remote_temperature", 0.0))
         self.add_info_row(form, "temperature", self.remote_temp_sb, "temp")
 
-        self.remote_prompt_le = QLineEdit()
-        self.remote_prompt_le.setText(self.config.get("remote_initial_prompt", ""))
-        self.remote_prompt_le.setPlaceholderText("Context words...")
-        self.add_info_row(form, "initial_prompt", self.remote_prompt_le, "prompt")
-
         # 🔹 Remote advanced
         self.remote_no_speech_sb = QDoubleSpinBox()
         self.remote_no_speech_sb.setRange(0.0, 1.0)
@@ -563,13 +561,6 @@ class SettingsDialog(QDialog):
         self.remote_smart_normalization_chk = QCheckBox(tr("enabled"))
         self.remote_smart_normalization_chk.setChecked(self.config.get("remote_smart_normalization", False))
         self.add_info_row(form, "smart_normalization", self.remote_smart_normalization_chk, "smart_normalization")
-
-        from PySide6.QtWidgets import QPlainTextEdit
-        self.remote_replacements_te = QPlainTextEdit()
-        self.remote_replacements_te.setPlaceholderText("word:replacement\nколл:call")
-        self.remote_replacements_te.setPlainText(self.config.get("remote_word_replacements", ""))
-        self.remote_replacements_te.setMaximumHeight(80)
-        self.add_info_row(form, "word_replacements", self.remote_replacements_te, "word_replacements")
 
         layout.addLayout(form)
         layout.addStretch()
@@ -778,7 +769,6 @@ class SettingsDialog(QDialog):
         self.config["remote_repetition_penalty"] = self.remote_repetition_sb.value()
         self.config["remote_no_repeat_ngram_size"] = self.remote_no_repeat_sb.value()
         self.config["remote_smart_normalization"] = self.remote_smart_normalization_chk.isChecked()
-        self.config["remote_word_replacements"] = self.remote_replacements_te.toPlainText()
 
         save_config(self.config)
         set_ui_lang(self.config["ui_language"])

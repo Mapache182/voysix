@@ -148,9 +148,15 @@ jobs:
       - name: Create DMG
         working-directory: ./App
         run: |
-          # cx_Freeze puts the .app in a build/exe.macosx... directory or build/
-          # Finding the .app path
+          mkdir -p dist
+          # List build directory to see where cx_Freeze put the app (for debugging)
+          ls -R build
+          
           APP_PATH=$(find build -name "Voysix.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: Voysix.app not found in build directory!"
+            exit 1
+          fi
           echo "Found app at: $APP_PATH"
           
           create-dmg \
@@ -169,8 +175,8 @@ jobs:
         with:
           name: "Release ${{ github.ref_name }}"
           files: App/dist/Voysix_macOS.dmg
+          fail_on_unmatched_files: true
           draft: false
           prerelease: false
-          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

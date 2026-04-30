@@ -27,7 +27,8 @@ def is_tailscale_present():
     # Check PATH
     import subprocess
     try:
-        subprocess.run(["where", "tailscale"], capture_output=True, check=True, shell=True)
+        check_cmd = "where" if sys.platform == "win32" else "which"
+        subprocess.run([check_cmd, "tailscale"], capture_output=True, check=True, shell=(sys.platform == "win32"))
         return True
     except:
         return False
@@ -37,6 +38,13 @@ class TailscaleDownloadWorker(QThread):
     finished = Signal(bool, str) # success, msg
 
     def run(self):
+        if sys.platform == "darwin":
+            # On macOS, we don't download MSI. We point to the App Store or official DMG.
+            import webbrowser
+            webbrowser.open("https://tailscale.com/download/mac")
+            self.finished.emit(True, "Opened Tailscale download page. Please install Tailscale and sign in.")
+            return
+
         try:
             url = TAILSCALE_MSI_URL
             response = requests.get(url, stream=True, timeout=15)
@@ -62,28 +70,14 @@ class TailscaleDownloadWorker(QThread):
                             
             self.progress.emit(total_size, total_size)
             
-            # --- Installation ---
-            # Removing /qn (silent) so the user can see the progress bar and success message.
-            # /passive shows progress but doesn't require user input for most parts.
-            # Or just remove flags for full interactive installer.
+            # --- Installation (Windows) ---
             import ctypes
-            # 32 = SUCCESS (anything > 32 is success for ShellExecute)
-            # Using "open" verb for standard installer UI.
             res = ctypes.windll.shell32.ShellExecuteW(None, "runas", "msiexec.exe", f'/i "{tmp_path}"', None, 1)
             
             if res <= 32:
-                # Fallback to subprocess if shell32 failed or was cancelled
                 subprocess.run(["msiexec.exe", "/i", tmp_path], check=True)
 
-            
-            # We don't really know when msiexec finishes since it runs in background by default.
-            # But we can wait a few seconds or check if the service appears.
             time.sleep(5) 
-            
-            # Cleanup temp file is tricky because msiexec might still be reading it.
-            # We'll try to delete it after a delay in a separate thread or just leave it to OS temp cleanup.
-            # os.remove(tmp_path) 
-            
             self.finished.emit(True, "Tailscale installation started! It will finish in the background. Please wait a minute before testing connection again.")
         except Exception as e:
             self.finished.emit(False, str(e))
@@ -124,15 +118,17 @@ class TailscaleDownloadDialog(QDialog):
             
     def on_finished(self, success, msg):
         if success:
-            reply = QMessageBox.warning(
-                self, 
-                tr("ts_reboot_required"), 
-                tr("ts_reboot_msg") + "\n\n" + tr("ts_restart_now"),
-                QMessageBox.Yes | QMessageBox.No
-            )
-            if reply == QMessageBox.Yes:
-                import os
-                os.system("shutdown /r /t 0")
+            if sys.platform == "win32":
+                reply = QMessageBox.warning(
+                    self, 
+                    tr("ts_reboot_required"), 
+                    tr("ts_reboot_msg") + "\n\n" + tr("ts_restart_now"),
+                    QMessageBox.Yes | QMessageBox.No
+                )
+                if reply == QMessageBox.Yes:
+                    os.system("shutdown /r /t 0")
+            else:
+                QMessageBox.information(self, "Tailscale", msg)
             self.accept()
         else:
             QMessageBox.critical(self, "Download Error", f"Failed to download Tailscale:\n{msg}")

@@ -56,7 +56,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # --- JOB 2: Сборка .exe для приложения (Windows) ---
-  build-app:
+  build-app-windows:
     if: startsWith(github.ref, 'refs/tags/app-')
     runs-on: windows-latest
     permissions:
@@ -74,7 +74,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Устанавливаем CPU-версию torch для ускорения сборки и уменьшения размера
           pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install -r App/requirements.txt
 
@@ -82,16 +81,94 @@ jobs:
         working-directory: ./App
         shell: bash
         run: |
-          # Extract version from tag (e.g., app-4.4.52 -> 4.4.52)
           VERSION=${GITHUB_REF_NAME#app-}
-          echo "Building version: $VERSION"
           python build_dist.py $VERSION
 
-      - name: Create Release and Upload Asset
+      - name: Upload Windows Asset
         uses: softprops/action-gh-release@v2
         with:
           name: "Release ${{ github.ref_name }}"
           files: App/dist/Voysix_Setup.exe
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # --- JOB 3: Сборка .dmg для приложения (macOS) ---
+  build-app-macos:
+    if: startsWith(github.ref, 'refs/tags/app-')
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          brew install create-dmg
+
+      - name: Prepare Icons (.icns)
+        run: |
+          mkdir icon.iconset
+          sips -z 16 16     App/assets/icon.png --out icon.iconset/icon_16x16.png
+          sips -z 32 32     App/assets/icon.png --out icon.iconset/icon_16x16@2x.png
+          sips -z 32 32     App/assets/icon.png --out icon.iconset/icon_32x32.png
+          sips -z 64 64     App/assets/icon.png --out icon.iconset/icon_32x32@2x.png
+          sips -z 128 128   App/assets/icon.png --out icon.iconset/icon_128x128.png
+          sips -z 256 256   App/assets/icon.png --out icon.iconset/icon_128x128@2x.png
+          sips -z 256 256   App/assets/icon.png --out icon.iconset/icon_256x256.png
+          sips -z 512 512   App/assets/icon.png --out icon.iconset/icon_256x256@2x.png
+          sips -z 512 512   App/assets/icon.png --out icon.iconset/icon_512x512.png
+          sips -z 1024 1024 App/assets/icon.png --out icon.iconset/icon_512x512@2x.png
+          iconutil -c icns icon.iconset
+          cp icon.icns App/assets/icon.icns
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Remove Windows-only packages from requirements
+          sed -i '' '/winshell/d; /pywin32/d; /pycaw/d; /comtypes/d' App/requirements.txt
+          pip install torch torchaudio
+          pip install -r App/requirements.txt
+
+      - name: Build and Package App (.app)
+        working-directory: ./App
+        run: |
+          VERSION=${GITHUB_REF_NAME#app-}
+          python build_macos.py $VERSION
+
+      - name: Create DMG
+        working-directory: ./App
+        run: |
+          # cx_Freeze puts the .app in a build/exe.macosx... directory or build/
+          # Finding the .app path
+          APP_PATH=$(find build -name "Voysix.app" -type d | head -n 1)
+          echo "Found app at: $APP_PATH"
+          
+          create-dmg \
+            --volname "Voysix Installer" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "Voysix.app" 150 190 \
+            --hide-extension "Voysix.app" \
+            --app-drop-link 450 185 \
+            "dist/Voysix_macOS.dmg" \
+            "$APP_PATH"
+
+      - name: Upload macOS Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Release ${{ github.ref_name }}"
+          files: App/dist/Voysix_macOS.dmg
           draft: false
           prerelease: false
           generate_release_notes: true

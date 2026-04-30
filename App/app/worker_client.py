@@ -22,10 +22,10 @@ class WorkerClient:
 
     def _get_tailscale_cmd(self):
         """Returns the full path to tailscale executable or just 'tailscale' if it's in PATH."""
-        if os.name == 'nt':
+        if sys.platform == "win32":
             # Check relative to script/exe first (if bundled or downloaded to app folder)
-            import sys
-            base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(__file__))
+            import sys as sys_win
+            base_dir = os.path.dirname(sys_win.executable) if getattr(sys_win, 'frozen', False) else os.path.dirname(os.path.dirname(__file__))
             
             # Common installation paths on Windows
             program_files = os.environ.get("ProgramFiles", "C:\\Program Files")
@@ -36,15 +36,25 @@ class WorkerClient:
                 local_app_data = os.path.join(user_profile, "AppData", "Local")
 
             common_paths = [
-                os.path.join(base_dir, "tailscale", "tailscale.exe"), # 🔹 Local bundle
-                os.path.join(base_dir, "tailscale.exe"),               # 🔹 Local root
+                os.path.join(base_dir, "tailscale", "tailscale.exe"), # Local bundle
+                os.path.join(base_dir, "tailscale.exe"),               # Local root
                 os.path.join(program_files, "Tailscale", "tailscale.exe"),
                 os.path.join(program_files_x86, "Tailscale", "tailscale.exe"),
-                os.path.join(local_app_data, "Programs", "Tailscale", "tailscale.exe"), # 🔹 User-only installs
+                os.path.join(local_app_data, "Programs", "Tailscale", "tailscale.exe"), # User-only installs
             ]
             for p in common_paths:
                 if os.path.exists(p):
                     return p
+        elif sys.platform == "darwin":
+            common_paths = [
+                "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
+                "/usr/local/bin/tailscale",
+                "/opt/homebrew/bin/tailscale"
+            ]
+            for p in common_paths:
+                if os.path.exists(p):
+                    return p
+        
         return "tailscale"
     
     def _run_tailscale_cmd(self, args):
@@ -54,16 +64,16 @@ class WorkerClient:
         # If we have a full path, use it directly. 
         # If it's just "tailscale", it relies on PATH.
         try:
-            # On Windows, using a list with shell=True is generally safer for escaping 
-            # than manual string concatenation if the executable path has spaces.
-            # However, if cmd is a full path with spaces, we still want it handled correctly.
+            # shell=True is required on Windows to find 'tailscale' in PATH if not absolute.
+            # On macOS/Linux, it's generally better to use shell=False with a list.
+            use_shell = (sys.platform == "win32")
             
             return subprocess.run(
                 [cmd] + args,
                 capture_output=True,
                 text=True,
                 check=False,
-                shell=True # Required on Windows to find 'tailscale' in PATH if not absolute
+                shell=use_shell
             )
         except Exception as e:
             # Fallback for unexpected subprocess errors
@@ -76,35 +86,41 @@ class WorkerClient:
             return MockResult("", str(e), 1)
 
     def restart_tailscale_service(self, auth_key=None):
-        """Attempts to restart the Tailscale service with Administrator privileges on Windows."""
-        if os.name != 'nt':
-            return False, "Not supported on this OS"
+        """Attempts to restart the Tailscale service or run 'up' with elevation."""
+        if sys.platform == "win32":
+            import ctypes
+            try:
+                cmd_path = self._get_tailscale_cmd()
+                commands = ["net stop tailscale", "net start tailscale"]
+                if auth_key:
+                    quoted_exe = f'"{cmd_path}"' if ' ' in cmd_path else cmd_path
+                    commands.append(f'{quoted_exe} up --authkey {auth_key} --reset')
+                
+                params = f'/c "{" & ".join(commands)}"'
+                res = ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", params, None, 1)
+                if res > 32:
+                    return True, "Restart command sent."
+                else:
+                    return False, f"Elevation failed ({res})"
+            except Exception as e:
+                return False, str(e)
+        
+        elif sys.platform == "darwin":
+            try:
+                cmd_path = self._get_tailscale_cmd()
+                # On macOS, we use osascript to run commands as root
+                # We'll try to run 'up' with the key
+                if auth_key:
+                    script = f'do shell script "{cmd_path} up --authkey {auth_key} --reset" with administrator privileges'
+                    subprocess.run(["osascript", "-e", script], check=True)
+                    return True, "Tailscale 'up' command executed."
+                else:
+                    # Just a restart of the app/CLI isn't easily unified on Mac without knowing if it's App Store or CLI
+                    return False, "Auth key required for elevated macOS operations."
+            except Exception as e:
+                return False, str(e)
 
-        import ctypes
-        # 32 = SUCCESS (anything > 32 is success for ShellExecute)
-        # Using "runas" to trigger UAC prompt for service management
-        try:
-            cmd_path = self._get_tailscale_cmd()
-            # We use cmd.exe to run multiple commands (stop then start)
-            # /c executes the string and then terminates
-            
-            # 1. Stop and Start service
-            commands = ["net stop tailscale", "net start tailscale"]
-            
-            # 2. If auth_key is provided, also run 'up' elevated
-            if auth_key:
-                # Need to quote the exe path if it has spaces
-                quoted_exe = f'"{cmd_path}"' if ' ' in cmd_path else cmd_path
-                commands.append(f'{quoted_exe} up --authkey {auth_key} --reset')
-            
-            params = f'/c "{" & ".join(commands)}"'
-            res = ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", params, None, 1)
-            if res > 32:
-                return True, "Restart command sent. Please wait for the service to initialize."
-            else:
-                return False, f"Failed to elevate (Error code: {res})"
-        except Exception as e:
-            return False, str(e)
+        return False, "Not supported on this OS"
     
     def get_tailscale_status(self, auth_key=None):
         try:

@@ -8,11 +8,17 @@ import sys
 def get_resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for cx_Freeze """
     if getattr(sys, 'frozen', False):
-        # The path to the executable's directory
-        base_dir = os.path.dirname(sys.executable)
+        if sys.platform == "darwin":
+            # On macOS, if frozen, resources are usually in ../Resources or same dir as binary
+            # depending on how cx_Freeze was configured. 
+            # In bdist_mac, it's often in Contents/Resources
+            base_dir = os.path.dirname(sys.executable)
+            # If we are inside MacOS/ subdirectory of the bundle
+            if "Contents/MacOS" in base_dir:
+                base_dir = os.path.abspath(os.path.join(base_dir, "..", "Resources"))
+        else:
+            base_dir = os.path.dirname(sys.executable)
     else:
-        # Path to the App directory (one level up from app/utils.py)
-        # Assuming app/utils.py is inside App/app/
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
     return os.path.join(base_dir, relative_path)
@@ -29,12 +35,14 @@ except AttributeError:
     HAS_WIN32 = False
 
 def toggle_media_playback():
-    """Toggle system media playback (Pause/Play) on Windows."""
+    """Toggle system media playback (Pause/Play)."""
     if HAS_WIN32:
         user32.keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0)
         user32.keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0)
+    elif sys.platform == "darwin":
+        import subprocess
+        subprocess.run(["osascript", "-e", 'tell application "System Events" to key code 103'], capture_output=True) # Usually Play/Pause
     else:
-        # Fallback for other platforms (unsupported for now)
         pass
 
 def native_paste():
@@ -45,8 +53,10 @@ def native_paste():
         user32.keybd_event(VK_V, 0, 0, 0)
         user32.keybd_event(VK_V, 0, KEYEVENTF_KEYUP, 0)
         user32.keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0)
+    elif sys.platform == "darwin":
+        pyautogui.hotkey('command', 'v')
     else:
-        # Linux / Mac fallback
+        # Linux fallback
         pyautogui.hotkey('ctrl', 'v')
 
 def output_transcription(text, mode="type", delay=0.7, cleanup=0, add_space=False, add_newline=False):

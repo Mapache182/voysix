@@ -50,7 +50,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.91"
+        self.version = "4.4.93"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:
@@ -123,7 +123,7 @@ class AppController(QObject):
         # Timer to detect sleep/wake
         self.last_check_time = time.time()
         self.sleep_check_timer = QTimer(self)
-        self.sleep_check_timer.timeout.connect(self.check_system_sleep)
+        self.sleep_check_timer.timeout.connect(self.periodic_check)
         self.sleep_check_timer.start(10000) # Check every 10 seconds
         
 
@@ -620,13 +620,25 @@ class AppController(QObject):
             msg.setIconPixmap(QIcon(icon_path).pixmap(64, 64))
         msg.exec()
 
-    def check_system_sleep(self):
+    def periodic_check(self):
+        """Periodic check for system sleep and UI health."""
         current_time = time.time()
+        
+        # 1. System Sleep Detection
         # If the gap is significantly larger than the timer interval (e.g., > 30s for a 10s timer)
         if (current_time - self.last_check_time) > 40:
             print("System resume detected! Restarting app for fresh state...")
             self.restart_app()
+            return # App will restart, no need to continue
+            
         self.last_check_time = current_time
+
+        # 2. UI Persistence Check
+        # Re-assert "Always on Top" if enabled, to prevent it from being buried by other topmost windows
+        if self.config.get("always_on_top", True) and hasattr(self, 'floating_ui'):
+            # We don't want to be TOO aggressive, but calling raise_ occasionally helps
+            # bring_to_front now has the SetWindowPos logic and calls show()
+            self.floating_ui.bring_to_front()
 
     def restart_services(self):
         # We now simply restart the whole process for maximum reliability

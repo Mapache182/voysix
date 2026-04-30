@@ -29,21 +29,25 @@ plugins_dir = os.path.join(pyside6_dir, "plugins")
 import shiboken6
 shiboken_dir = os.path.dirname(shiboken6.__file__)
 
+packages = [
+    "os", "sys", "whisper", "faster_whisper", "huggingface_hub", "tokenizers", 
+    "sounddevice", "numpy", "pynput", "pyautogui", "pyperclip", "threading", 
+    "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets",
+    "torch", "json", "ctypes", "psutil", 
+    "requests", "chardet", "idna", "certifi", "soundfile"
+]
+if sys.platform == "win32":
+    packages.extend(["pycaw", "comtypes"])
+
 build_exe_options = {
-    "packages": [
-        "os", "sys", "whisper", "faster_whisper", "huggingface_hub", "tokenizers", 
-        "sounddevice", "numpy", "pynput", "pyautogui", "pyperclip", "threading", 
-        "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets",
-        "torch", "json", "ctypes", "pycaw", "comtypes", "psutil", 
-        "requests", "chardet", "idna", "certifi", "soundfile"
-    ],
+    "packages": packages,
     "include_files": [
         ("app", "app"),
         ("assets", "assets"),
         ("version.txt", "version.txt"),
         (shiboken_dir, "lib/shiboken6"), # Manually include shiboken files
     ],
-    "include_msvcr": True,
+    "include_msvcr": sys.platform == "win32",
     "excludes": [
         "tkinter",
         "pydoc",

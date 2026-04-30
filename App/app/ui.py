@@ -14,7 +14,7 @@ class FloatingStatus(QWidget):
     geometry_changed = Signal()
     def __init__(self):
         super().__init__()
-        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.ToolTip)
+        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setMouseTracking(True)
         self.setMinimumSize(100, 30)
@@ -106,6 +106,9 @@ class FloatingStatus(QWidget):
             self.label_widget.setText(self.status_labels.get(status, status))
              
         self.update()
+        if status in ["recording", "processing"]:
+            self.bring_to_front()
+            
         if status == "done":
             QTimer.singleShot(2000, lambda: self.set_status("idle"))
 
@@ -125,11 +128,23 @@ class FloatingStatus(QWidget):
     def bring_to_front(self):
         self.show()
         self.raise_()
-        self.activateWindow()
+        # Re-assert always on top if configured (using Win32 API for maximum persistence)
+        if self.windowFlags() & Qt.WindowStaysOnTopHint:
+            if sys.platform == "win32":
+                try:
+                    hwnd = self.winId()
+                    if hwnd:
+                        # HWND_TOPMOST = -1
+                        # SWP_NOMOVE = 0x0002, SWP_NOSIZE = 0x0001, SWP_SHOWWINDOW = 0x0040, SWP_NOACTIVATE = 0x0010
+                        # We use SWP_NOACTIVATE to avoid stealing focus from the active text field
+                        ctypes.windll.user32.SetWindowPos(int(hwnd), -1, 0, 0, 0, 0, 0x0002 | 0x0001 | 0x0040 | 0x0010)
+                except: pass
+            else:
+                self.activateWindow()
 
     def set_always_on_top(self, on):
         geom = self.geometry()
-        flags = Qt.FramelessWindowHint | Qt.ToolTip
+        flags = Qt.FramelessWindowHint | Qt.Tool
         if on: flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
         
@@ -138,11 +153,14 @@ class FloatingStatus(QWidget):
         
         self.setGeometry(geom)
         if on:
-            try:
-                hwnd = self.winId()
-                if hwnd:
-                    ctypes.windll.user32.SetWindowPos(int(hwnd), -1, 0, 0, 0, 0, 0x0002 | 0x0001 | 0x0040 | 0x0010)
-            except: pass
+            if sys.platform == "win32":
+                try:
+                    hwnd = self.winId()
+                    if hwnd:
+                        ctypes.windll.user32.SetWindowPos(int(hwnd), -1, 0, 0, 0, 0, 0x0002 | 0x0001 | 0x0040 | 0x0010)
+                except: pass
+            else:
+                self.raise_()
         self.show()
         self.raise_()
 

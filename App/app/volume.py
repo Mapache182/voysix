@@ -3,10 +3,15 @@ try:
     from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
     from comtypes import CLSCTX_ALL
     WINDOWS_AUDIO = True
-except ImportError:
+except (ImportError, Exception):
     WINDOWS_AUDIO = False
 
-import ctypes
+import sys
+import subprocess
+import os
+
+MACOS_AUDIO = sys.platform == "darwin"
+
 import threading
 
 class VolumeManager:
@@ -27,7 +32,10 @@ class VolumeManager:
         return cls._instance
 
     def _init_com(self):
-        """Internal: ensure COM and interface are ready."""
+        """Internal: ensure COM and interface are ready (Windows) or check macOS."""
+        if MACOS_AUDIO:
+            return True # No special init needed for osascript
+            
         if not WINDOWS_AUDIO:
             return False
             
@@ -50,7 +58,8 @@ class VolumeManager:
             self._volume_ptr = comtypes.cast(self._interface, comtypes.POINTER(IAudioEndpointVolume))
             return True
         except Exception as e:
-            print(f"VolumeManager Init Error: {e}")
+            if sys.platform == "win32":
+                print(f"VolumeManager Init Error: {e}")
             self._cleanup()
             return False
 
@@ -62,6 +71,14 @@ class VolumeManager:
 
     def get_volume(self):
         with self._lock:
+            if MACOS_AUDIO:
+                try:
+                    result = subprocess.check_output(["osascript", "-e", "input volume of (get volume settings)"]).decode().strip()
+                    return int(result)
+                except Exception as e:
+                    print(f"macOS Volume Get Error: {e}")
+                    return 50
+
             if not self._init_com():
                 return 50
             try:
@@ -78,6 +95,13 @@ class VolumeManager:
 
     def set_volume(self, level):
         with self._lock:
+            if MACOS_AUDIO:
+                try:
+                    subprocess.run(["osascript", "-e", f"set volume input volume {level}"], check=True)
+                except Exception as e:
+                    print(f"macOS Volume Set Error: {e}")
+                return
+
             if not self._init_com():
                 return
             try:

@@ -55,6 +55,17 @@ build_exe_options = {
     "zip_exclude_packages": ["*"],
 }
 
+# --- macOS specific options ---
+bdist_mac_options = {
+    "bundle_name": "Voysix",
+    "iconfile": "assets/icon.icns", # Will need to create this
+    "plist_items": [
+        ("CFBundleIdentifier", "com.voysix.app"),
+        ("NSMicrophoneUsageDescription", "Voysix needs microphone access for speech-to-text."),
+        ("LSUIElement", "1") # Hides from dock if it's a tray app
+    ],
+}
+
 if os.path.exists(plugins_dir):
     build_exe_options["include_files"].append((plugins_dir, "lib/PySide6/plugins"))
 
@@ -74,17 +85,18 @@ if sys.platform == "win32":
 
 setup(
     name="Voysix",
-    version="4.4.91",
+    version="4.4.93",
     description="Voysix Application (Speech-to-Text)",
     options={
-        "build_exe": build_exe_options
+        "build_exe": build_exe_options,
+        "bdist_mac": bdist_mac_options
     },
     executables=[
         Executable(
             "main.py",
             base=base,
-            target_name="Voysix.exe",
-            icon="assets/icon.ico",
+            target_name="Voysix.exe" if sys.platform == "win32" else "Voysix",
+            icon="assets/icon.ico" if sys.platform == "win32" else "assets/icon.icns",
             shortcut_name="Voysix",
             shortcut_dir="ProgramMenuFolder",
         )

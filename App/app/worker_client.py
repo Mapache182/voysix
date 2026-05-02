@@ -6,6 +6,8 @@ import numpy as np
 import io
 import wave
 import time
+import sys
+import traceback
 
 class WorkerClient:
     def __init__(self, node_name=None, api_key=None, manual_url=None):
@@ -24,8 +26,7 @@ class WorkerClient:
         """Returns the full path to tailscale executable or just 'tailscale' if it's in PATH."""
         if sys.platform == "win32":
             # Check relative to script/exe first (if bundled or downloaded to app folder)
-            import sys as sys_win
-            base_dir = os.path.dirname(sys_win.executable) if getattr(sys_win, 'frozen', False) else os.path.dirname(os.path.dirname(__file__))
+            base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(__file__))
             
             # Common installation paths on Windows
             program_files = os.environ.get("ProgramFiles", "C:\\Program Files")
@@ -216,7 +217,6 @@ class WorkerClient:
             }
         except Exception as e:
             print(f"Tailscale Check CRITICAL Error: {e}")
-            import traceback
             traceback.print_exc()
             return {
                 "connected": False,
@@ -301,7 +301,6 @@ class WorkerClient:
         except Exception as e:
             if not getattr(self, "_tailscale_error_shown", False):
                 print(f"Tailscale discovery error: {e}")
-                import traceback
                 traceback.print_exc()
                 self._tailscale_error_shown = True
 

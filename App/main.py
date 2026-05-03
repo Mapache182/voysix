@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 
 # 🔹 Fix for numba/coverage conflict:
 # Some environments have a 'coverage' module that lacks 'types', causing numba to crash.
@@ -10,7 +11,8 @@ sys.modules['coverage'] = None
 # Prioritize local project directory to avoid importing from "Program Files"
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import ctypes
+if os.name == 'nt':
+    import ctypes
 import threading
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QObject, Signal, Slot, QTimer
@@ -732,8 +734,9 @@ class AppController(QObject):
 
 def main():
     sys.setrecursionlimit(5000)
-    # --- Single Instance Check (Windows) ---
+    # --- Single Instance Check ---
     if os.name == 'nt':
+        import ctypes
         mutex_name = "VoysixAppInstanceMutex_Unique_2025"
         # We store the handle in a global to prevent it from being garbage collected
         global _app_mutex
@@ -751,17 +754,38 @@ def main():
             except:
                 pass
             sys.exit(0)
+    else:
+        # Simple lock file for macOS/Linux
+        import tempfile
+        lock_file = os.path.join(tempfile.gettempdir(), "voysix.lock")
+        if os.path.exists(lock_file):
+            try:
+                # Try to remove if it's stale (process not running)
+                # This is a very basic check, on macOS usually the OS handles single instance
+                # if packaged as .app, but for dev/standalone it's good to have.
+                os.remove(lock_file)
+            except:
+                print("Another instance of Voysix might be running.")
+                sys.exit(0)
+        
+        with open(lock_file, 'w') as f:
+            f.write(str(os.getpid()))
+        
+        # Ensure cleanup on exit
+        import atexit
+        atexit.register(lambda: os.remove(lock_file) if os.path.exists(lock_file) else None)
     # ---------------------------------------
 
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     
-    # Initialize COM for the main thread once
-    try:
-        import comtypes
-        comtypes.CoInitialize()
-    except Exception as e:
-        print(f"COM Init Warning: {e}")
+    # Initialize COM for the main thread once (Windows only)
+    if os.name == 'nt':
+        try:
+            import comtypes
+            comtypes.CoInitialize()
+        except Exception as e:
+            print(f"COM Init Warning: {e}")
     
     icon_path = get_resource_path(os.path.join("assets", "icon.png"))
     if os.path.exists(icon_path):

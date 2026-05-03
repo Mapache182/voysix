@@ -1,13 +1,24 @@
 import json
 import os
 
-# Use %APPDATA%/voysix/config.json for persistence across updates
+# Use %APPDATA%/voysix/config.json (Windows) or ~/Library/Application Support/voysix/config.json (macOS)
 if os.name == "nt":
     APP_DATA_DIR = os.path.join(os.environ.get("APPDATA", ""), "voysix")
     if not os.path.exists(APP_DATA_DIR):
         os.makedirs(APP_DATA_DIR, exist_ok=True)
     CONFIG_FILE = os.path.join(APP_DATA_DIR, "config.json")
+elif os.name == "posix":
+    import platform
+    if platform.system() == "Darwin":
+        APP_DATA_DIR = os.path.expanduser("~/Library/Application Support/voysix")
+    else:
+        APP_DATA_DIR = os.path.expanduser("~/.voysix")
+        
+    if not os.path.exists(APP_DATA_DIR):
+        os.makedirs(APP_DATA_DIR, exist_ok=True)
+    CONFIG_FILE = os.path.join(APP_DATA_DIR, "config.json")
 else:
+    APP_DATA_DIR = "."
     CONFIG_FILE = "config.json"
 
 

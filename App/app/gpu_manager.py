@@ -13,34 +13,42 @@ from app.i18n import tr
 GPU_DLLS_URL = "https://speed.hetzner.de/100MB.bin" 
 
 def check_hardware_for_nvidia():
-    """Returns True if the system has an NVIDIA GPU using Windows WMIC."""
-    if sys.platform != 'win32':
-        return False
-    try:
-        import subprocess
-        # CREATE_NO_WINDOW = 0x08000000 to avoid popping a terminal
-        CREATE_NO_WINDOW = 0x08000000
-        output = subprocess.check_output(
-            "wmic path win32_VideoController get name", 
-            text=True, 
-            creationflags=CREATE_NO_WINDOW
-        )
-        return "nvidia" in output.lower()
-    except Exception as e:
-        print(f"Warning: Could not check for NVIDIA GPU: {e}")
-        return False
+    """Returns True if the system has an NVIDIA GPU."""
+    if sys.platform == 'win32':
+        try:
+            import subprocess
+            # CREATE_NO_WINDOW = 0x08000000 to avoid popping a terminal
+            CREATE_NO_WINDOW = 0x08000000
+            output = subprocess.check_output(
+                "wmic path win32_VideoController get name", 
+                text=True, 
+                creationflags=CREATE_NO_WINDOW
+            )
+            return "nvidia" in output.lower()
+        except Exception as e:
+            print(f"Warning: Could not check for NVIDIA GPU: {e}")
+            return False
+    elif sys.platform == 'darwin':
+        # On macOS, we generally look for Apple Silicon (M1/M2/M3) which has integrated GPU
+        # or discrete AMD/NVIDIA on older Intel Macs. 
+        # But for Whisper, we mostly care about MPS support.
+        return False # This function is specifically for NVIDIA/CUDA discovery
+    return False
 
 def check_gpu_available():
-    """Check if we have GPU capabilities dynamically"""
+    """Check if we have GPU capabilities dynamically (CUDA or MPS)"""
     try:
         import torch
         if torch.cuda.is_available():
             return True
+        if sys.platform == "darwin":
+            if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                return True
     except:
         pass
         
-    # If in frozen exe, check if DLLs exist
-    if getattr(sys, 'frozen', False):
+    # If in frozen exe on Windows, check if DLLs exist
+    if sys.platform == "win32" and getattr(sys, 'frozen', False):
         base_dir = os.path.dirname(sys.executable)
         lib_dir = os.path.join(base_dir, 'lib')
         dl_target_11 = os.path.join(lib_dir, 'cublas64_11.dll')

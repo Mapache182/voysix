@@ -16,9 +16,11 @@ class WhisperTranscriber:
         self.device = "cpu"
         if self.use_gpu:
             try:
-                from app.gpu_manager import check_gpu_available
-                if check_gpu_available():
+                import torch
+                if torch.cuda.is_available():
                     self.device = "cuda"
+                elif sys.platform == "darwin" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                    self.device = "mps"
             except:
                 pass
         
@@ -31,9 +33,11 @@ class WhisperTranscriber:
                 self.use_gpu = use_gpu
                 if self.use_gpu:
                     try:
-                        from app.gpu_manager import check_gpu_available
-                        if check_gpu_available():
+                        import torch
+                        if torch.cuda.is_available():
                             self.device = "cuda"
+                        elif sys.platform == "darwin" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                            self.device = "mps"
                         else:
                             self.device = "cpu"
                     except:
@@ -66,6 +70,9 @@ class WhisperTranscriber:
                 gc.collect()
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
+                elif hasattr(torch, "mps") and torch.backends.mps.is_available():
+                    # No explicit empty_cache for MPS but gc helps
+                    pass
                 print("DEBUG: Previous model released.")
 
             try:
@@ -128,6 +135,8 @@ class WhisperTranscriber:
                 gc.collect()
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
+                elif hasattr(torch, "mps") and torch.backends.mps.is_available():
+                    pass
                 print("DEBUG: Model unloaded successfully.")
             else:
                 print("Model was not loaded, nothing to unload.")
@@ -172,9 +181,16 @@ class WhisperTranscriber:
                 else:
                     # OpenAI Whisper is harder to interrupt mid-call,
                     # but we will check after if we should discard results.
+                    
+                    # 🔹 On MPS, fp16 is sometimes unstable with older torch, 
+                    # but generally recommended for performance on Apple Silicon.
+                    use_fp16 = (self.device == "cuda")
+                    if self.device == "mps":
+                         use_fp16 = True # Default to True for MPS performance
+                         
                     result = self.model.transcribe(
                         audio_np, 
-                        fp16=(self.device == "cuda"),
+                        fp16=use_fp16,
                         language=lang_code,
                         beam_size=beam_size,
                         best_of=beam_size if temperature > 0 else 1,

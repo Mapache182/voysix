@@ -26,6 +26,7 @@ from app.transcriber import WhisperTranscriber
 from app.hotkeys import GlobalListener
 from app.settings import load_config, save_config
 from app.utils import output_transcription, get_resource_path, toggle_media_playback
+from app.ai_helper import clean_text_with_ai
 import queue
 from app.i18n import set_ui_lang, tr
 from app.volume import get_mic_volume, set_mic_volume
@@ -52,7 +53,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.94"
+        self.version = "4.4.97"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:
@@ -430,6 +431,16 @@ class AppController(QObject):
             if smart_norm:
                 text = apply_smart_normalization(text)
                 
+            # 🔹 4. AI Enhancement ---
+            if self.config.get("ai_enabled", False) and self.config.get("openrouter_api_key"):
+                self.status_changed.emit("processing") # Show "thinking" while AI is working
+                text = clean_text_with_ai(
+                    text, 
+                    self.config["openrouter_api_key"],
+                    model=self.config.get("openrouter_model", "google/gemini-2.0-flash-001"),
+                    prompt=self.config.get("ai_prompt", "")
+                )
+
             trans_dur = time.time() - self.transcription_start_time
             print(f"DEBUG: --- Performance Report ---")
             print(f"DEBUG: Audio Length: {len(audio)/16000:.2f}s")

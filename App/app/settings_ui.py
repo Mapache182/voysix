@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
     QCheckBox, QPushButton, QDoubleSpinBox, QFormLayout, QSlider, QSpinBox, QLineEdit, QMessageBox,
-    QTabWidget, QWidget, QScrollArea, QMenu
+    QTabWidget, QWidget, QScrollArea, QMenu, QLayout
 )
 from PySide6.QtCore import Qt, QTimer, Signal, QThread
 from PySide6.QtGui import QKeyEvent, QMouseEvent, QIcon
@@ -137,7 +137,8 @@ class SettingsDialog(QDialog):
         icon_path = get_resource_path(os.path.join("assets", "icon.png"))
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
-        self.setMinimumSize(420, 550)
+        self.setMinimumSize(420, 600)
+        self.all_models = []
         
         main_layout = QVBoxLayout(self)
         
@@ -147,6 +148,7 @@ class SettingsDialog(QDialog):
         self.init_general_tab()
         self.init_local_tab()
         self.init_remote_tab()
+        self.init_ai_tab()
         
         main_layout.addWidget(self.tabs)
 
@@ -179,7 +181,10 @@ class SettingsDialog(QDialog):
 
     def add_info_row(self, form, label_key, widget, help_key):
         row_layout = QHBoxLayout()
-        row_layout.addWidget(widget)
+        if isinstance(widget, QLayout):
+            row_layout.addLayout(widget)
+        else:
+            row_layout.addWidget(widget)
         
         info_btn = QPushButton("ⓘ")
         info_btn.setFixedSize(20, 20)
@@ -588,6 +593,106 @@ class SettingsDialog(QDialog):
         layout.addStretch()
         self.tabs.addTab(tab, tr("tab_remote"))
 
+    def init_ai_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        form = QFormLayout()
+
+        # AI Enabled
+        self.ai_enabled_chk = QCheckBox(tr("enabled"))
+        self.ai_enabled_chk.setChecked(self.config.get("ai_enabled", False))
+        self.add_info_row(form, "ai_enabled", self.ai_enabled_chk, "ai_enabled_help")
+
+        # OpenRouter API Key
+        self.openrouter_key_le = QLineEdit()
+        self.openrouter_key_le.setEchoMode(QLineEdit.Password)
+        self.openrouter_key_le.setText(self.config.get("openrouter_api_key", ""))
+        self.openrouter_key_le.setPlaceholderText("sk-or-v1-...")
+        self.add_info_row(form, "openrouter_key", self.openrouter_key_le, "openrouter_key_help")
+
+        # OpenRouter Model
+        self.openrouter_model_cb = QComboBox()
+        self.openrouter_model_cb.setEditable(True)
+        current_model = self.config.get("openrouter_model", "google/gemini-2.0-flash-001")
+        self.openrouter_model_cb.addItem(current_model)
+        self.openrouter_model_cb.setCurrentText(current_model)
+        
+        model_layout = QHBoxLayout()
+        model_layout.addWidget(self.openrouter_model_cb)
+        
+        self.fetch_models_btn = QPushButton(tr("fetch_models"))
+        self.fetch_models_btn.clicked.connect(self._fetch_openrouter_models)
+        model_layout.addWidget(self.fetch_models_btn)
+        
+        self.add_info_row(form, "openrouter_model", model_layout, "openrouter_model_help")
+
+        # Filter Free Only
+        self.free_only_chk = QCheckBox(tr("free_models_only"))
+        self.free_only_chk.stateChanged.connect(self._update_model_list)
+        self.add_info_row(form, "free_models_only", self.free_only_chk, "free_models_help")
+
+        # AI Prompt
+        from PySide6.QtWidgets import QPlainTextEdit
+        self.ai_prompt_te = QPlainTextEdit()
+        self.ai_prompt_te.setPlainText(self.config.get("ai_prompt", ""))
+        self.ai_prompt_te.setMaximumHeight(150)
+        self.add_info_row(form, "ai_prompt_label", self.ai_prompt_te, "ai_prompt_help")
+
+        layout.addLayout(form)
+        layout.addStretch()
+        self.tabs.addTab(tab, tr("tab_ai"))
+
+    def _fetch_openrouter_models(self):
+        from app.ai_helper import get_openrouter_models
+        self.fetch_models_btn.setEnabled(False)
+        self.fetch_models_btn.setText(tr("loading"))
+        
+        def run():
+            models = get_openrouter_models()
+            self.all_models = models
+            from PySide6.QtCore import QMetaObject, Q_ARG
+            QMetaObject.invokeMethod(self, "_on_models_fetched", Qt.QueuedConnection)
+
+        threading.Thread(target=run, daemon=True).start()
+
+    from PySide6.QtCore import Slot
+    @Slot()
+    def _on_models_fetched(self):
+        self.fetch_models_btn.setEnabled(True)
+        self.fetch_models_btn.setText(tr("fetch_models"))
+        self._update_model_list()
+
+    def _update_model_list(self):
+        current = self.openrouter_model_cb.currentText()
+        self.openrouter_model_cb.clear()
+        
+        free_only = self.free_only_chk.isChecked()
+        
+        count = 0
+        for m in self.all_models:
+            mid = m.get("id", "")
+            # Check if model is free. OpenRouter models often have pricing: {"prompt": "0", "completion": "0"}
+            is_free = False
+            pricing = m.get("pricing", {})
+            if pricing:
+                try:
+                    if float(pricing.get("prompt", 1)) == 0 and float(pricing.get("completion", 1)) == 0:
+                        is_free = True
+                except: pass
+            
+            if free_only and not is_free:
+                continue
+                
+            self.openrouter_model_cb.addItem(mid)
+            count += 1
+            
+        if current:
+            if self.openrouter_model_cb.findText(current) == -1:
+                self.openrouter_model_cb.addItem(current)
+            self.openrouter_model_cb.setCurrentText(current)
+            
+        print(f"DEBUG: Updated model list: {count} models shown.")
+
     def _toggle_status_timer(self, state):
         if state == Qt.Checked or state == 2:
             self.status_timer.start(15000) # 15 seconds
@@ -790,6 +895,12 @@ class SettingsDialog(QDialog):
         self.config["remote_repetition_penalty"] = self.remote_repetition_sb.value()
         self.config["remote_no_repeat_ngram_size"] = self.remote_no_repeat_sb.value()
         self.config["remote_smart_normalization"] = self.remote_smart_normalization_chk.isChecked()
+
+        # AI Settings
+        self.config["ai_enabled"] = self.ai_enabled_chk.isChecked()
+        self.config["openrouter_api_key"] = self.openrouter_key_le.text().strip()
+        self.config["openrouter_model"] = self.openrouter_model_cb.currentText().strip()
+        self.config["ai_prompt"] = self.ai_prompt_te.toPlainText()
 
         save_config(self.config)
         set_ui_lang(self.config["ui_language"])

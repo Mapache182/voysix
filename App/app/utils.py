@@ -131,3 +131,31 @@ def apply_smart_normalization(text):
     text = re.sub(r'(^|[.!?]\s+)([a-zа-я])', capitalize, text)
 
     return text
+
+def _get_machine_secret():
+    import os
+    # Simple stable secret based on user and machine name
+    return (os.environ.get("COMPUTERNAME", "") + os.environ.get("USERNAME", "voysix_default")).encode()
+
+def protect_key(text):
+    if not text: return ""
+    import base64
+    secret = _get_machine_secret()
+    # Simple XOR obfuscation
+    encoded = bytearray()
+    for i in range(len(text)):
+        encoded.append(ord(text[i]) ^ secret[i % len(secret)])
+    return "p:" + base64.b64encode(encoded).decode('utf-8')
+
+def unprotect_key(text):
+    if not text or not text.startswith("p:"): return text
+    import base64
+    try:
+        secret = _get_machine_secret()
+        encoded = base64.b64decode(text[2:])
+        decoded = bytearray()
+        for i in range(len(encoded)):
+            decoded.append(encoded[i] ^ secret[i % len(secret)])
+        return decoded.decode('utf-8')
+    except:
+        return ""

@@ -88,7 +88,14 @@ TRANSLATIONS = {
         "presets": "Presets",
         "apply_preset": "Apply Preset",
         "replace": "Replace",
-        "append": "Append"
+        "append": "Append",
+        "tab_ai": "AI Enhancement",
+        "ai_enabled": "AI Cleanup:",
+        "openrouter_key": "OpenRouter Key:",
+        "openrouter_model": "AI Model:",
+        "ai_prompt_label": "Enhancement Prompt:",
+        "fetch_models": "Refresh List",
+        "free_models_only": "Free Only"
     },
     "ru": {
         "ready": "Готов",
@@ -179,7 +186,14 @@ TRANSLATIONS = {
         "presets": "Библиотека пресетов",
         "apply_preset": "Применить",
         "replace": "Заменить",
-        "append": "Добавить"
+        "append": "Добавить",
+        "tab_ai": "ИИ Обработка",
+        "ai_enabled": "ИИ-чистка текста:",
+        "openrouter_key": "Ключ OpenRouter:",
+        "openrouter_model": "Модель ИИ:",
+        "ai_prompt_label": "Промпт для ИИ:",
+        "fetch_models": "Обновить список",
+        "free_models_only": "Только бесплатные"
     },
     "es": {
         "ready": "Listo",
@@ -294,7 +308,12 @@ HELP_TEXT = {
         "hallucination": "<b>Hallucination Threshold:</b><br>Silence threshold (seconds) for hallucination detection. High values reduce 'loops'.",
         "repetition": "<b>Repetition Penalty:</b><br>Penalty for repeating same tokens. Helps with loops in Faster-Whisper.",
         "no_repeat": "<b>No-Repeat N-gram:</b><br>Prevents repeating same word sequences of this length.",
-        "log_level_help": "<b>Logging Level:</b><br>Silent: No logs in the log window.<br>Info: Only important events (connection/errors) are shown.<br>Debug: Everything is shown (useful for troubleshooting)."
+        "log_level_help": "<b>Logging Level:</b><br>Silent: No logs in the log window.<br>Info: Only important events (connection/errors) are shown.<br>Debug: Everything is shown (useful for troubleshooting).",
+        "ai_enabled_help": "<b>AI Cleanup:</b><br>Use an LLM (via OpenRouter) to fix grammar, punctuation, and recognition errors in the transcribed text.",
+        "openrouter_key_help": "<b>OpenRouter Key:</b><br>Your API key from openrouter.ai. Required for AI cleanup.",
+        "openrouter_model_help": "<b>AI Model:</b><br>The model to use (e.g., google/gemini-2.0-flash-001).",
+        "ai_prompt_help": "<b>AI Prompt:</b><br>Instructions for the AI on how to clean up the text.",
+        "free_models_help": "<b>Free Only:</b><br>Filter the list to show only models that are currently free to use on OpenRouter."
     },
     "ru": {
         "model": "<b>Модель Whisper:</b><br>'tiny' — самая быстрая, 'large' — самая точная. 'base' рекомендуется для большинства.",
@@ -333,7 +352,12 @@ HELP_TEXT = {
         "hallucination": "<b>Порог галлюцинаций:</b><br>Длительность тишины (сек), после которой модель может начать 'выдумывать' текст. Помогает убрать эхо.",
         "repetition": "<b>Штраф за повторы:</b><br>Коэффициент наказания за одинаковые токены. Эффективно против зацикливания.",
         "no_repeat": "<b>Запрет N-грамм:</b><br>Запрещает повторение последовательностей слов указанной длины.",
-        "log_level_help": "<b>Уровень логирования:</b><br>Отключено: В окне логов ничего не отображается.<br>Инфо: Отображаются только важные события (подключение/ошибки).<br>Дебаг: Отображается всё подряд (помогает при поиске проблем)."
+        "log_level_help": "<b>Уровень логирования:</b><br>Отключено: В окне логов ничего не отображается.<br>Инфо: Отображаются только важные события (подключение/ошибки).<br>Дебаг: Отображается всё подряд (помогает при поиске проблем).",
+        "ai_enabled_help": "<b>ИИ-чистка:</b><br>Использовать нейросеть (через OpenRouter) для исправления грамматики, пунктуации и ошибок распознавания.",
+        "openrouter_key_help": "<b>Ключ OpenRouter:</b><br>Ваш API ключ с сайта openrouter.ai. Необходим для работы ИИ-чистки.",
+        "openrouter_model_help": "<b>Модель ИИ:</b><br>Название модели (например, google/gemini-2.0-flash-001).",
+        "ai_prompt_help": "<b>Промпт для ИИ:</b><br>Инструкция для нейросети о том, как именно нужно исправить текст.",
+        "free_models_help": "<b>Только бесплатные:</b><br>Показывать в списке только те модели, которые на данный момент бесплатны в OpenRouter."
     },
     "es": {
         "model": "<b>Modelo Whisper:</b><br>'tiny' es el más rápido, 'large' el más preciso. 'base' se recomienda para la mayoría.",

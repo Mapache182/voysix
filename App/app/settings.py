@@ -80,8 +80,16 @@ DEFAULT_CONFIG = {
     "remote_smart_normalization": False,
     "remote_word_replacements": "",
     "remote_audio_format": "flac",
-    "log_level": "info"
+    "log_level": "info",
+    
+    "ai_enabled": False,
+    "openrouter_api_key": "",
+    "openrouter_model": "google/gemini-2.0-flash-001",
+    "ai_prompt": "Ты — помощник по исправлению текста. Твоя задача — взять расшифрованную речь и превратить её в грамотный, структурированный текст, сохраняя смысл и стиль автора. Исправь пунктуацию, грамматику и явные ошибки распознавания. Выдай ТОЛЬКО исправленный текст без комментариев."
 }
+
+SENSITIVE_KEYS = ["remote_api_key", "tailscale_auth_key", "openrouter_api_key"]
+
 
 def load_config():
     # Legacy config location (local directory)
@@ -101,14 +109,31 @@ def load_config():
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                return {**DEFAULT_CONFIG, **json.load(f)}
+                data = json.load(f)
+                config = {**DEFAULT_CONFIG, **data}
+                
+                # Unprotect sensitive keys
+                from app.utils import unprotect_key
+                for key in SENSITIVE_KEYS:
+                    if key in config:
+                        config[key] = unprotect_key(config[key])
+                return config
         except:
             return DEFAULT_CONFIG
     return DEFAULT_CONFIG
 
 def save_config(config):
     try:
+        # Create a copy to not modify the live config
+        export_config = config.copy()
+        
+        # Protect sensitive keys
+        from app.utils import protect_key
+        for key in SENSITIVE_KEYS:
+            if key in export_config:
+                export_config[key] = protect_key(export_config[key])
+                
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            json.dump(config, f, indent=4)
+            json.dump(export_config, f, indent=4)
     except Exception as e:
         print(f"Error saving config: {e}")

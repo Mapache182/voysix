@@ -53,7 +53,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.97"
+        self.version = "4.4.99"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:
@@ -100,8 +100,8 @@ class AppController(QObject):
         self.idle_timer.timeout.connect(self.check_idle)
         self.idle_timer.start(30000) # Check every 30 seconds
         
-        self.listener = GlobalListener(self.on_press, self.on_release, self.on_abort)
-        self.listener.start(self.config["hotkey"])
+        self.listener = GlobalListener(self.on_press, self.on_release, self.on_abort, self.restore_last_transcription)
+        self.listener.start(self.config["hotkey"], self.config.get("restore_hotkey", "f10"))
         
         self.floating_ui = FloatingStatus()
         pos = self.config.get("window_pos", [20, 20])
@@ -147,6 +147,7 @@ class AppController(QObject):
         )
         
         self.abort_transcription = False
+        self.last_transcription = None
         self.settings_dialog = None
         self.worker_url = None
         self.worker_info = None
@@ -451,6 +452,8 @@ class AppController(QObject):
             
             self.floating_ui.set_durations(transcription=trans_dur)
             self.transcription_start_time = 0
+            if text:
+                self.last_transcription = text
             self.status_changed.emit("done")
             output_transcription(
                 text, 
@@ -506,6 +509,36 @@ class AppController(QObject):
                 "word_replacements": self.config.get("word_replacements", ""),
                 "smart_normalization": self.config.get("smart_normalization", False)
             }
+
+    def restore_last_transcription(self):
+        if not getattr(self, 'last_transcription', None):
+            print("DEBUG: No last transcription available to restore.")
+            return
+
+        print(f"DEBUG: Restoring last transcription to clipboard/typing: '{self.last_transcription[:30]}...'")
+        
+        # If currently recording, abort it first
+        if self.recorder.recording:
+            print("DEBUG: Aborting current recording to restore last transcription.")
+            try:
+                if self.config.get("pause_media_on_record", False):
+                    toggle_media_playback()
+                self.recorder.stop()
+            except: pass
+            self.floating_ui.set_durations(recording=0.0, transcription=0.0)
+
+        # Trigger visual confirmation
+        self.status_changed.emit("done")
+        
+        # Re-paste the last transcription
+        output_transcription(
+            self.last_transcription, 
+            mode=self.config["output_mode"], 
+            delay=self.config["paste_delay"],
+            cleanup=0, # Do not press backspaces for a restore action
+            add_space=self.config.get("add_space", False),
+            add_newline=self.config.get("add_newline", False)
+        )
 
     def check_idle(self):
         if not self.config.get("unload_idle", False):
@@ -576,7 +609,7 @@ class AppController(QObject):
                  self.recorder.close()
         
         self.listener.stop()
-        self.listener.start(self.config["hotkey"])
+        self.listener.start(self.config["hotkey"], self.config.get("restore_hotkey", "f10"))
 
         # If Local is disabled, unload it from RAM
         if not self.config.get("local_whisper_enabled", True):

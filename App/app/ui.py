@@ -219,6 +219,8 @@ class FloatingStatus(QWidget):
         self.geometry_changed.emit()
         event.accept()
 
+
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)

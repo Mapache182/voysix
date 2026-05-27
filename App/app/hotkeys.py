@@ -2,16 +2,18 @@ from pynput import mouse, keyboard
 import threading
 
 class GlobalListener:
-    def __init__(self, on_press_callback, on_release_callback, on_abort_callback=None):
+    def __init__(self, on_press_callback, on_release_callback, on_abort_callback=None, on_restore_callback=None):
         self.on_press_callback = on_press_callback
         self.on_release_callback = on_release_callback
         self.on_abort_callback = on_abort_callback
+        self.on_restore_callback = on_restore_callback
         self.mouse_listener = None
         self.key_listener = None
+        self.restore_hotkey_str = ""
 
-    def start(self, hotkey_str="middle_click"):
+    def start(self, hotkey_str="middle_click", restore_hotkey_str=""):
         self.stop()
-        
+        self.restore_hotkey_str = restore_hotkey_str
         
         # We always start a keyboard listener to catch 'Escape' for aborting
         self.key_listener = keyboard.Listener(
@@ -26,13 +28,16 @@ class GlobalListener:
             print("Listening for Middle Click + Escape (abort)...")
         else:
             print(f"Listening for keyboard hotkey: {hotkey_str} + Escape (abort)")
+        
+        if restore_hotkey_str:
+            print(f"Listening for keyboard restore hotkey: {restore_hotkey_str}")
 
     def _on_mouse_click(self, x, y, button, pressed):
         try:
             if button == mouse.Button.middle:
                 self._trigger(pressed)
-        except:
-            pass
+        except Exception as e:
+            print(f"Error in _on_mouse_click: {e}")
         return True # 🔹 CRITICAL: Explicitly return True for pynput to continue
 
     def _on_key(self, key, pressed, target_str):
@@ -49,10 +54,16 @@ class GlobalListener:
             else:
                 k_str = str(key).replace('Key.', '').lower()
             
+            # Check for Restore Hotkey
+            if self.restore_hotkey_str and k_str == self.restore_hotkey_str.lower():
+                if pressed and self.on_restore_callback:
+                    self._trigger_restore()
+                return True
+            
             if k_str == target_str.lower():
                 self._trigger(pressed)
-        except:
-            pass
+        except Exception as e:
+            print(f"Error in _on_key: {e}")
         return True # 🔹 CRITICAL: Explicitly return True for pynput to continue
 
     def _trigger_abort(self):
@@ -62,6 +73,15 @@ class GlobalListener:
                     self.on_abort_callback()
             except Exception as e:
                 print(f"Abort callback execution error: {e}")
+        threading.Thread(target=target, daemon=True).start()
+
+    def _trigger_restore(self):
+        def target():
+            try:
+                if self.on_restore_callback:
+                    self.on_restore_callback()
+            except Exception as e:
+                print(f"Restore callback execution error: {e}")
         threading.Thread(target=target, daemon=True).start()
 
     def _trigger(self, pressed):

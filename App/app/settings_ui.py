@@ -249,6 +249,10 @@ class SettingsDialog(QDialog):
         self.hotkey_le = HotkeyLineEdit(self.config.get("hotkey", "middle_click"))
         self.add_info_row(form, "hotkey", self.hotkey_le, "hotkey")
 
+        # Restore Hotkey
+        self.restore_hotkey_le = HotkeyLineEdit(self.config.get("restore_hotkey", "f10"))
+        self.add_info_row(form, "restore_hotkey", self.restore_hotkey_le, "restore_hotkey_help")
+
         # Behavior
         self.autostart_chk = QCheckBox(tr("enabled"))
         self.autostart_chk.setChecked(is_autostart_enabled())
@@ -858,6 +862,7 @@ class SettingsDialog(QDialog):
         self.config["smart_normalization"] = self.smart_normalization_chk.isChecked()
         self.config["opacity"] = self.opacity_slider.value() / 100.0
         self.config["hotkey"] = self.hotkey_le.text().strip().lower()
+        self.config["restore_hotkey"] = self.restore_hotkey_le.text().strip().lower()
         self.config["beam_size"] = self.beam_size_sb.value()
         self.config["temperature"] = self.temp_sb.value()
         self.config["no_speech_threshold"] = self.no_speech_sb.value()

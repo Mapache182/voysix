@@ -26,6 +26,7 @@ DEFAULT_CONFIG = {
     "model_name": "base",
     "local_whisper_enabled": True,
     "hotkey": "middle_click",
+    "restore_hotkey": "f10",
     "backspace_cleanup": 0,
     "paste_delay": 0.7,
 

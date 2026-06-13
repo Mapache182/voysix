@@ -40,7 +40,7 @@ DEFAULT_CONFIG = {
     "opacity": 0.9,
     "beam_size": 5,
     "temperature": 0.0,
-    "initial_prompt": "Это запись русской речи. Пожалуйста, соблюдайте пунктуацию и правильные окончания слов.",
+    "initial_prompt": "Это запись русской речи. Пожалуйста, соблюдайте пунктуацию и правильные окончания слов. Если пользователь произносит ключевое слово, распознавай его строго как voisyx.",
     "ui_language": "en",
     "ui_design": "waveform", # "classic" or "waveform"
     "remote_mode": False,
@@ -69,7 +69,9 @@ DEFAULT_CONFIG = {
     "repetition_penalty": 1.0,
     "no_repeat_ngram_size": 0,
     "smart_normalization": False,
-    "word_replacements": "мерч:merch\nвоисикс:Voysix",
+    "word_replacements": "мерч:merch\nвоисикс:voisyx\nвойсикс:voisyx\nвойс икс:voisyx\nvoicex:voisyx",
+    "voice_actions_enabled": True,
+    "voice_timers_enabled": True,
     
     "remote_no_speech_threshold": 0.6,
     "remote_logprob_threshold": -1.0,

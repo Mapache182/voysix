@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSystemTrayIcon, QMenu, QTextEdit, QPlainTextEdit, QPushButton, QSpacerItem, QSizePolicy
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSystemTrayIcon, QMenu, QTextEdit, QPlainTextEdit, QPushButton, QSpacerItem, QSizePolicy, QFrame, QGraphicsDropShadowEffect
 from PySide6.QtCore import Qt, QTimer, Signal, Slot, QPoint, QRect
-from PySide6.QtGui import QIcon, QPainter, QColor, QAction, QTextCursor, QPixmap, QLinearGradient
+from PySide6.QtGui import QIcon, QPainter, QColor, QAction, QTextCursor, QPixmap, QLinearGradient, QFont
 import sys
 import os
 import io
@@ -9,6 +9,141 @@ import time
 from app.i18n import tr, hlp
 from app.utils import get_resource_path
 from app.settings import APP_DATA_DIR
+
+
+class VoiceTaskPopup(QWidget):
+    def __init__(self, title, message, task_name, duration, accent="#10b981", parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setFixedSize(360, 168)
+
+        shell = QVBoxLayout(self)
+        shell.setContentsMargins(16, 16, 16, 16)
+
+        self.card = QFrame(self)
+        self.card.setObjectName("voiceTaskCard")
+        self.card.setStyleSheet(f"""
+            QFrame#voiceTaskCard {{
+                background: #111827;
+                border: 1px solid rgba(255, 255, 255, 28);
+                border-radius: 18px;
+            }}
+            QLabel {{
+                background: transparent;
+                color: #f8fafc;
+                border: none;
+            }}
+            QLabel#eyebrow {{
+                color: #93c5fd;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0px;
+                text-transform: uppercase;
+            }}
+            QLabel#title {{
+                color: #ffffff;
+                font-size: 18px;
+                font-weight: 700;
+            }}
+            QLabel#message {{
+                color: #cbd5e1;
+                font-size: 13px;
+            }}
+            QLabel#meta {{
+                color: #e5e7eb;
+                font-size: 12px;
+                font-weight: 600;
+            }}
+            QLabel#durationPill {{
+                background: {accent};
+                color: #08111f;
+                border-radius: 12px;
+                padding: 5px 10px;
+                font-size: 13px;
+                font-weight: 800;
+            }}
+            QPushButton#closeButton {{
+                background: rgba(255, 255, 255, 18);
+                color: #e5e7eb;
+                border: none;
+                border-radius: 12px;
+                font-size: 15px;
+                font-weight: 700;
+            }}
+            QPushButton#closeButton:hover {{
+                background: rgba(255, 255, 255, 38);
+                color: #ffffff;
+            }}
+        """)
+
+        shadow = QGraphicsDropShadowEffect(self.card)
+        shadow.setBlurRadius(34)
+        shadow.setOffset(0, 12)
+        shadow.setColor(QColor(0, 0, 0, 150))
+        self.card.setGraphicsEffect(shadow)
+
+        layout = QVBoxLayout(self.card)
+        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setSpacing(8)
+
+        top = QHBoxLayout()
+        top.setSpacing(10)
+
+        accent_bar = QFrame(self.card)
+        accent_bar.setFixedSize(5, 44)
+        accent_bar.setStyleSheet(f"background: {accent}; border-radius: 2px;")
+        top.addWidget(accent_bar)
+
+        heading = QVBoxLayout()
+        heading.setSpacing(2)
+        eyebrow = QLabel("VOISYX")
+        eyebrow.setObjectName("eyebrow")
+        title_label = QLabel(title)
+        title_label.setObjectName("title")
+        title_label.setWordWrap(True)
+        heading.addWidget(eyebrow)
+        heading.addWidget(title_label)
+        top.addLayout(heading, 1)
+
+        close_btn = QPushButton("x")
+        close_btn.setObjectName("closeButton")
+        close_btn.setFixedSize(24, 24)
+        close_btn.clicked.connect(self.close)
+        top.addWidget(close_btn, 0, Qt.AlignTop)
+        layout.addLayout(top)
+
+        message_label = QLabel(message)
+        message_label.setObjectName("message")
+        message_label.setWordWrap(True)
+        layout.addWidget(message_label)
+
+        bottom = QHBoxLayout()
+        bottom.setSpacing(8)
+        meta = QLabel(task_name)
+        meta.setObjectName("meta")
+        bottom.addWidget(meta, 1)
+        duration_pill = QLabel(duration)
+        duration_pill.setObjectName("durationPill")
+        duration_pill.setAlignment(Qt.AlignCenter)
+        duration_pill.setMinimumWidth(72)
+        bottom.addWidget(duration_pill, 0, Qt.AlignRight)
+        layout.addLayout(bottom)
+
+        shell.addWidget(self.card)
+
+    def show_at_screen_edge(self):
+        screen = self.screen()
+        if screen is None:
+            screen = QApplication.primaryScreen() if QApplication.instance() else None
+        if screen:
+            area = screen.availableGeometry()
+            self.move(area.right() - self.width() - 22, area.bottom() - self.height() - 22)
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
 
 class FloatingStatus(QWidget):
     geometry_changed = Signal()

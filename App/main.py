@@ -19,7 +19,7 @@ from PySide6.QtCore import QObject, Signal, Slot, QTimer
 from PySide6.QtGui import QIcon
 
 import time
-from app.ui import FloatingStatus, AppTrayIcon, LogWindow, LogHandler
+from app.ui import FloatingStatus, AppTrayIcon, LogWindow, LogHandler, VoiceTaskPopup
 from app.settings_ui import SettingsDialog
 from app.recorder import AudioRecorder
 from app.transcriber import WhisperTranscriber
@@ -27,6 +27,7 @@ from app.hotkeys import GlobalListener
 from app.settings import load_config, save_config
 from app.utils import output_transcription, get_resource_path, toggle_media_playback
 from app.ai_helper import clean_text_with_ai
+from app.voice_actions import build_voice_prompt, parse_voice_action
 import queue
 from app.i18n import set_ui_lang, tr
 from app.volume import get_mic_volume, set_mic_volume
@@ -36,6 +37,7 @@ class AppController(QObject):
     log_signal = Signal(str)
     level_changed = Signal(float)
     engine_state_changed = Signal(bool, bool, bool)
+    voice_action_requested = Signal(dict)
     
     def __init__(self):
         super().__init__()
@@ -53,7 +55,7 @@ class AppController(QObject):
         set_ui_lang(self.config.get("ui_language", "en"))
         
         # Load version
-        self.version = "4.4.99"
+        self.version = "4.4.103"
         version_file = get_resource_path("version.txt")
         if os.path.exists(version_file):
             try:
@@ -139,6 +141,7 @@ class AppController(QObject):
         self.status_changed.connect(self.update_status) # Changed from set_status
         self.level_changed.connect(self.floating_ui.set_level)
         self.engine_state_changed.connect(self.floating_ui.set_engine_state)
+        self.voice_action_requested.connect(self._handle_voice_action)
         
         self.engine_state_changed.emit(
             self.config.get("remote_mode", False),
@@ -151,6 +154,9 @@ class AppController(QObject):
         self.settings_dialog = None
         self.worker_url = None
         self.worker_info = None
+        self.voice_timers = {}
+        self.next_voice_timer_id = 1
+        self.voice_action_popups = []
         
         # Periodic discovery for remote worker
         self.discovery_timer = QTimer(self)
@@ -431,6 +437,16 @@ class AppController(QObject):
             text = apply_replacements(text, repl_str)
             if smart_norm:
                 text = apply_smart_normalization(text)
+
+            voice_action = parse_voice_action(text, self.config)
+            if voice_action:
+                trans_dur = time.time() - self.transcription_start_time
+                self.floating_ui.set_durations(transcription=trans_dur)
+                self.transcription_start_time = 0
+                self.status_changed.emit("done")
+                self.voice_action_requested.emit(voice_action)
+                print(f"Voice action handled: {voice_action}")
+                return
                 
             # 🔹 4. AI Enhancement ---
             if self.config.get("ai_enabled", False) and self.config.get("openrouter_api_key"):
@@ -473,6 +489,7 @@ class AppController(QObject):
 
     def _get_transcription_params(self, is_remote):
         """Helper to get a dictionary of parameters based on engine mode."""
+        voice_enabled = self.config.get("voice_actions_enabled", True)
         if is_remote:
             return {
                 "language": self.config.get("remote_language", "auto"),
@@ -480,7 +497,7 @@ class AppController(QObject):
                 "engine": self.config.get("remote_engine", "openai-whisper"),
                 "beam_size": self.config.get("remote_beam_size", 5),
                 "temperature": self.config.get("remote_temperature", 0.0),
-                "initial_prompt": self.config.get("initial_prompt", ""),
+                "initial_prompt": build_voice_prompt(self.config.get("initial_prompt", ""), voice_enabled),
                 "no_speech_threshold": self.config.get("remote_no_speech_threshold", 0.6),
                 "logprob_threshold": self.config.get("remote_logprob_threshold", -1.0),
                 "compression_ratio_threshold": self.config.get("remote_compression_ratio_threshold", 2.4),
@@ -498,7 +515,7 @@ class AppController(QObject):
                 "engine": self.config.get("engine", "openai-whisper"),
                 "beam_size": self.config.get("beam_size", 5),
                 "temperature": self.config.get("temperature", 0.0),
-                "initial_prompt": self.config.get("initial_prompt", ""),
+                "initial_prompt": build_voice_prompt(self.config.get("initial_prompt", ""), voice_enabled),
                 "no_speech_threshold": self.config.get("no_speech_threshold", 0.6),
                 "logprob_threshold": self.config.get("logprob_threshold", -1.0),
                 "compression_ratio_threshold": self.config.get("compression_ratio_threshold", 2.4),
@@ -509,6 +526,105 @@ class AppController(QObject):
                 "word_replacements": self.config.get("word_replacements", ""),
                 "smart_normalization": self.config.get("smart_normalization", False)
             }
+
+    @Slot(dict)
+    def _handle_voice_action(self, action):
+        action_type = action.get("type")
+
+        if action_type == "timer_start":
+            seconds = int(action.get("seconds", 0))
+            if seconds <= 0:
+                return
+
+            timer_id = self.next_voice_timer_id
+            self.next_voice_timer_id += 1
+
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(lambda tid=timer_id: self._on_voice_timer_finished(tid))
+            self.voice_timers[timer_id] = {
+                "timer": timer,
+                "label": action.get("label", f"{seconds} sec"),
+                "seconds": seconds,
+                "started_at": time.time(),
+            }
+            timer.start(seconds * 1000)
+
+            message = tr("voice_timer_set").format(duration=action.get("label", f"{seconds} sec"))
+            print(f"Voice action: {message}")
+            self.tray.showMessage("Voysix", message)
+            self._show_voice_task_popup(
+                title=tr("voice_task_popup_title"),
+                message=tr("voice_task_popup_text"),
+                task_name=tr("voice_timer_task_name"),
+                duration=action.get("label", f"{seconds} sec"),
+                accent="#10b981",
+                timeout_ms=6500,
+            )
+            self._play_timer_sound("start")
+            return
+
+        if action_type == "timer_cancel_all":
+            count = len(self.voice_timers)
+            for item in self.voice_timers.values():
+                item["timer"].stop()
+            self.voice_timers.clear()
+            message = tr("voice_no_active_timers") if count == 0 else tr("voice_timers_cancelled").format(count=count)
+            print(f"Voice action: {message}")
+            self.tray.showMessage("Voysix", message)
+            return
+
+        if action_type == "timer_too_long":
+            message = tr("voice_timer_too_long")
+            print(f"Voice action: {message}")
+            self.tray.showMessage("Voysix", message)
+            return
+
+        message = tr("voice_unknown_command")
+        print(f"Voice action: {message} Raw: {action.get('raw_text', '')}")
+        self.tray.showMessage("Voysix", message)
+
+    def _show_voice_task_popup(self, title, message, task_name, duration, accent, timeout_ms=7000):
+        popup = VoiceTaskPopup(title, message, task_name, duration, accent=accent)
+        self.voice_action_popups.append(popup)
+        popup.destroyed.connect(lambda _=None, p=popup: self._forget_voice_popup(p))
+        popup.show_at_screen_edge()
+        QTimer.singleShot(timeout_ms, popup.close)
+
+    def _forget_voice_popup(self, popup):
+        if popup in self.voice_action_popups:
+            self.voice_action_popups.remove(popup)
+
+    def _on_voice_timer_finished(self, timer_id):
+        item = self.voice_timers.pop(timer_id, None)
+        if not item:
+            return
+
+        message = tr("voice_timer_finished").format(duration=item["label"])
+        print(f"Voice action: {message}")
+        self.tray.showMessage("Voysix", message)
+        self._show_voice_task_popup(
+            title=tr("voice_timer_done_popup_title"),
+            message=tr("voice_timer_done_popup_text"),
+            task_name=tr("voice_timer_task_name"),
+            duration=item["label"],
+            accent="#f59e0b",
+            timeout_ms=12000,
+        )
+        self._play_timer_sound("finish")
+
+    def _play_timer_sound(self, kind):
+        if os.name != "nt":
+            return
+        try:
+            import winsound
+            if kind == "finish":
+                for freq, dur in ((880, 180), (1175, 220), (988, 260)):
+                    winsound.Beep(freq, dur)
+            else:
+                winsound.Beep(880, 120)
+        except Exception as e:
+            print(f"Timer sound failed: {e}")
 
     def restore_last_transcription(self):
         if not getattr(self, 'last_transcription', None):

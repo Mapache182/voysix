@@ -146,6 +146,7 @@ class SettingsDialog(QDialog):
         self.tabs = QTabWidget()
         
         self.init_general_tab()
+        self.init_voice_actions_tab()
         self.init_local_tab()
         self.init_remote_tab()
         self.init_ai_tab()
@@ -342,6 +343,36 @@ class SettingsDialog(QDialog):
         layout.addLayout(form)
         layout.addStretch()
         self.tabs.addTab(tab, tr("tab_general"))
+
+    def init_voice_actions_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        form = QFormLayout()
+
+        self.voice_actions_enabled_chk = QCheckBox(tr("enabled"))
+        self.voice_actions_enabled_chk.setChecked(self.config.get("voice_actions_enabled", True))
+        self.add_info_row(form, "voice_actions_enabled", self.voice_actions_enabled_chk, "voice_actions_enabled_help")
+
+        wake_word_lbl = QLabel("voisyx")
+        wake_word_lbl.setStyleSheet("font-weight: bold;")
+        self.add_info_row(form, "voice_wake_word", wake_word_lbl, "voice_wake_word_help")
+
+        self.voice_timers_enabled_chk = QCheckBox(tr("enabled"))
+        self.voice_timers_enabled_chk.setChecked(self.config.get("voice_timers_enabled", True))
+        self.add_info_row(form, "voice_timers_enabled", self.voice_timers_enabled_chk, "voice_timers_enabled_help")
+
+        examples = QLabel(
+            "voisyx, поставь таймер на 5 минут\n"
+            "voisyx, таймер на 30 секунд\n"
+            "voisyx, отмени таймер"
+        )
+        examples.setWordWrap(True)
+        examples.setStyleSheet("color: #555;")
+        form.addRow(tr("voice_examples"), examples)
+
+        layout.addLayout(form)
+        layout.addStretch()
+        self.tabs.addTab(tab, tr("tab_voice_actions"))
 
     def init_local_tab(self):
         tab = QWidget()
@@ -906,6 +937,10 @@ class SettingsDialog(QDialog):
         self.config["openrouter_api_key"] = self.openrouter_key_le.text().strip()
         self.config["openrouter_model"] = self.openrouter_model_cb.currentText().strip()
         self.config["ai_prompt"] = self.ai_prompt_te.toPlainText()
+
+        # Voice actions
+        self.config["voice_actions_enabled"] = self.voice_actions_enabled_chk.isChecked()
+        self.config["voice_timers_enabled"] = self.voice_timers_enabled_chk.isChecked()
 
         save_config(self.config)
         set_ui_lang(self.config["ui_language"])

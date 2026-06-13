@@ -96,7 +96,25 @@ TRANSLATIONS = {
         "openrouter_model": "AI Model:",
         "ai_prompt_label": "Enhancement Prompt:",
         "fetch_models": "Refresh List",
-        "free_models_only": "Free Only"
+        "free_models_only": "Free Only",
+        "tab_voice_actions": "Voice Actions",
+        "voice_actions_enabled": "Voice Actions:",
+        "voice_wake_word": "Wake Word:",
+        "voice_timers_enabled": "Timers:",
+        "voice_examples": "Examples:",
+        "voice_timer_set": "Timer set for {duration}.",
+        "voice_timer_finished": "Timer finished: {duration}",
+        "voice_timers_cancelled": "Cancelled {count} timer(s).",
+        "voice_no_active_timers": "No active timers.",
+        "voice_timer_too_long": "Timer is too long. Maximum is 24 hours.",
+        "voice_unknown_command": "Voice command was not recognized yet.",
+        "voice_task_popup_title": "New Task",
+        "voice_task_popup_text": "You set a timer.",
+        "voice_task_name": "Task",
+        "voice_timer_task_name": "Timer",
+        "voice_task_duration": "Duration",
+        "voice_timer_done_popup_title": "Timer Finished",
+        "voice_timer_done_popup_text": "Your timer has finished."
     },
     "ru": {
         "ready": "Готов",
@@ -195,7 +213,25 @@ TRANSLATIONS = {
         "openrouter_model": "Модель ИИ:",
         "ai_prompt_label": "Промпт для ИИ:",
         "fetch_models": "Обновить список",
-        "free_models_only": "Только бесплатные"
+        "free_models_only": "Только бесплатные",
+        "tab_voice_actions": "Голосовые задачи",
+        "voice_actions_enabled": "Голосовые задачи:",
+        "voice_wake_word": "Ключевая фраза:",
+        "voice_timers_enabled": "Таймеры:",
+        "voice_examples": "Примеры:",
+        "voice_timer_set": "Таймер поставлен на {duration}.",
+        "voice_timer_finished": "Таймер завершен: {duration}",
+        "voice_timers_cancelled": "Отменено таймеров: {count}.",
+        "voice_no_active_timers": "Активных таймеров нет.",
+        "voice_timer_too_long": "Таймер слишком длинный. Максимум 24 часа.",
+        "voice_unknown_command": "Голосовая команда пока не распознана.",
+        "voice_task_popup_title": "Новая задача",
+        "voice_task_popup_text": "Вы поставили таймер.",
+        "voice_task_name": "Задача",
+        "voice_timer_task_name": "Таймер",
+        "voice_task_duration": "Длительность",
+        "voice_timer_done_popup_title": "Таймер завершен",
+        "voice_timer_done_popup_text": "Ваш таймер закончился."
     },
     "es": {
         "ready": "Listo",
@@ -269,7 +305,25 @@ TRANSLATIONS = {
         "presets": "Ajustes predefinidos",
         "apply_preset": "Aplicar",
         "replace": "Reemplazar",
-        "append": "Añadir"
+        "append": "Añadir",
+        "tab_voice_actions": "Acciones de Voz",
+        "voice_actions_enabled": "Acciones de voz:",
+        "voice_wake_word": "Palabra clave:",
+        "voice_timers_enabled": "Temporizadores:",
+        "voice_examples": "Ejemplos:",
+        "voice_timer_set": "Temporizador configurado para {duration}.",
+        "voice_timer_finished": "Temporizador finalizado: {duration}",
+        "voice_timers_cancelled": "Temporizadores cancelados: {count}.",
+        "voice_no_active_timers": "No hay temporizadores activos.",
+        "voice_timer_too_long": "El temporizador es demasiado largo. Maximo 24 horas.",
+        "voice_unknown_command": "Comando de voz no reconocido todavia.",
+        "voice_task_popup_title": "Nueva tarea",
+        "voice_task_popup_text": "Has configurado un temporizador.",
+        "voice_task_name": "Tarea",
+        "voice_timer_task_name": "Temporizador",
+        "voice_task_duration": "Duracion",
+        "voice_timer_done_popup_title": "Temporizador finalizado",
+        "voice_timer_done_popup_text": "Tu temporizador ha terminado."
     }
 }
 
@@ -317,7 +371,10 @@ HELP_TEXT = {
         "openrouter_key_help": "<b>OpenRouter Key:</b><br>Your API key from openrouter.ai. Required for AI cleanup.",
         "openrouter_model_help": "<b>AI Model:</b><br>The model to use (e.g., google/gemini-2.0-flash-001).",
         "ai_prompt_help": "<b>AI Prompt:</b><br>Instructions for the AI on how to clean up the text.",
-        "free_models_help": "<b>Free Only:</b><br>Filter the list to show only models that are currently free to use on OpenRouter."
+        "free_models_help": "<b>Free Only:</b><br>Filter the list to show only models that are currently free to use on OpenRouter.",
+        "voice_actions_enabled_help": "<b>Voice Actions:</b><br>When enabled, phrases that start with 'voisyx' are handled as commands instead of pasted as text.",
+        "voice_wake_word_help": "<b>Wake Word:</b><br>Commands must start with 'voisyx'. This is fixed for now to avoid accidental triggers.",
+        "voice_timers_enabled_help": "<b>Timers:</b><br>Allows commands like 'voisyx, set a timer for 5 minutes'."
     },
     "ru": {
         "model": "<b>Модель Whisper:</b><br>'tiny' — самая быстрая, 'large' — самая точная. 'base' рекомендуется для большинства.",
@@ -362,7 +419,10 @@ HELP_TEXT = {
         "openrouter_key_help": "<b>Ключ OpenRouter:</b><br>Ваш API ключ с сайта openrouter.ai. Необходим для работы ИИ-чистки.",
         "openrouter_model_help": "<b>Модель ИИ:</b><br>Название модели (например, google/gemini-2.0-flash-001).",
         "ai_prompt_help": "<b>Промпт для ИИ:</b><br>Инструкция для нейросети о том, как именно нужно исправить текст.",
-        "free_models_help": "<b>Только бесплатные:</b><br>Показывать в списке только те модели, которые на данный момент бесплатны в OpenRouter."
+        "free_models_help": "<b>Только бесплатные:</b><br>Показывать в списке только те модели, которые на данный момент бесплатны в OpenRouter.",
+        "voice_actions_enabled_help": "<b>Голосовые задачи:</b><br>Если включено, фразы с ключевым словом 'voisyx' выполняются как команды, а не вставляются как текст.",
+        "voice_wake_word_help": "<b>Ключевая фраза:</b><br>Команды должны начинаться с 'voisyx'. Пока фраза фиксированная, чтобы избежать случайных срабатываний.",
+        "voice_timers_enabled_help": "<b>Таймеры:</b><br>Разрешает команды вроде 'voisyx, поставь таймер на 5 минут'."
     },
     "es": {
         "model": "<b>Modelo Whisper:</b><br>'tiny' es el más rápido, 'large' el más preciso. 'base' se recomienda para la mayoría.",
@@ -390,7 +450,10 @@ HELP_TEXT = {
         "add_newline": "<b>Añadir salto:</b><br>Añade un salto de línea (Enter) antes de insertar el texto.",
         "backspace_cleanup": "<b>Limpieza de Tecla:</b><br>Número de retrocesos a presionar antes de pegar.",
         "unload_idle": "<b>Descargar modelo:</b><br>Descarga el modelo de la RAM tras varios minutos de inactividad para ahorrar recursos.",
-        "idle_time": "<b>Tiempo de inactividad:</b><br>Tiempo en minutos tras el cual el modelo se descargará de la memoria RAM."
+        "idle_time": "<b>Tiempo de inactividad:</b><br>Tiempo en minutos tras el cual el modelo se descargará de la memoria RAM.",
+        "voice_actions_enabled_help": "<b>Acciones de voz:</b><br>Si está activado, las frases que empiezan con 'voisyx' se ejecutan como comandos en vez de pegarse como texto.",
+        "voice_wake_word_help": "<b>Palabra clave:</b><br>Los comandos deben empezar con 'voisyx'. Por ahora es fija para evitar activaciones accidentales.",
+        "voice_timers_enabled_help": "<b>Temporizadores:</b><br>Permite comandos como 'voisyx, timer for 5 minutes'."
     }
 }
 

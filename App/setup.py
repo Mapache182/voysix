@@ -29,7 +29,15 @@ plugins_dir = os.path.join(pyside6_dir, "plugins")
 import shiboken6
 shiboken_dir = os.path.dirname(shiboken6.__file__)
 
-packages = [
+import importlib.util
+
+def pkg_exists(name):
+    try:
+        return importlib.util.find_spec(name) is not None
+    except Exception:
+        return False
+
+candidate_packages = [
     "os", "sys", "whisper", "faster_whisper", "huggingface_hub", "tokenizers", 
     "sounddevice", "numpy", "pynput", "pyautogui", "pyperclip", "threading", 
     "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets",
@@ -38,7 +46,9 @@ packages = [
     "requests", "chardet", "idna", "certifi", "soundfile"
 ]
 if sys.platform == "win32":
-    packages.extend(["pycaw", "comtypes"])
+    candidate_packages.extend(["pycaw", "comtypes"])
+
+packages = [pkg for pkg in candidate_packages if pkg_exists(pkg)]
 
 build_exe_options = {
     "packages": packages,

@@ -5,10 +5,11 @@ import gc
 import threading
 
 class WhisperTranscriber:
-    def __init__(self, model_name="base", engine="openai-whisper", use_gpu=False):
+    def __init__(self, model_name="base", engine="openai-whisper", use_gpu=False, gigaam_model="v3_e2e_rnnt"):
         self.model_name = model_name
         self.engine = engine
         self.use_gpu = use_gpu
+        self.gigaam_model = gigaam_model
         self.download_root = os.path.join(os.environ.get("APPDATA", "."), "voysix", "models")
         os.makedirs(self.download_root, exist_ok=True)
         
@@ -27,7 +28,7 @@ class WhisperTranscriber:
         self.loading = False
         self._lock = threading.Lock()
 
-    def load_model(self, model_name=None, engine=None, use_gpu=None):
+    def load_model(self, model_name=None, engine=None, use_gpu=None, gigaam_model=None):
         with self._lock:
             if use_gpu is not None:
                 self.use_gpu = use_gpu
@@ -53,6 +54,8 @@ class WhisperTranscriber:
                 self.model_name = model_name
             if engine:
                 self.engine = engine
+            if gigaam_model:
+                self.gigaam_model = gigaam_model
             
             print(f"DEBUG: --- Model Change Requested: {self.model_name} ({self.engine}) on {self.device} ---")
             self.loading = True
@@ -77,7 +80,19 @@ class WhisperTranscriber:
 
             try:
                 print(f"DEBUG: Loading '{self.model_name}' on {self.device}...")
-                if self.engine == "faster-whisper":
+                if self.engine == "gigaam":
+                    print("DEBUG: Importing gigaam...")
+                    import gigaam
+                    gm_name = getattr(self, 'gigaam_model', 'v3_e2e_rnnt')
+                    print(f"DEBUG: Initializing GigaAM ({gm_name})...")
+                    self.model = gigaam.load_model(gm_name)
+                    # Move to device if GPU is requested and model supports it
+                    if self.device != "cpu":
+                        try:
+                            self.model = self.model.to(self.device)
+                        except Exception as e:
+                            print(f"DEBUG: GigaAM GPU move failed, using CPU: {e}")
+                elif self.engine == "faster-whisper":
                     print("DEBUG: Importing faster_whisper...")
                     from faster_whisper import WhisperModel
                     
@@ -146,6 +161,7 @@ class WhisperTranscriber:
                   compression_ratio_threshold=2.4, condition_on_previous_text=True,
                   hallucination_silence_threshold=2.0, repetition_penalty=1.0, no_repeat_ngram_size=0,
                   smart_normalization=False, word_replacements="",
+                  gigaam_model=None,
                   cancellation_callback=None):
         # Use lock to ensure we don't transcribe while loading
         with self._lock:
@@ -155,7 +171,20 @@ class WhisperTranscriber:
             try:
                 lang_code = None if language == "auto" else language
                 
-                if self.engine == "faster-whisper":
+                if self.engine == "gigaam":
+                    # GigaAM accepts raw numpy float32 16kHz — exactly our format
+                    result = self.model.transcribe(audio_np)
+                    if cancellation_callback and cancellation_callback():
+                        return None
+                    # result may be a string or a TranscriptionResult object
+                    if isinstance(result, str):
+                        return result.strip()
+                    # Handle TranscriptionResult (has .text attribute)
+                    if hasattr(result, 'text'):
+                        return result.text.strip()
+                    # Fallback: try string conversion
+                    return str(result).strip()
+                elif self.engine == "faster-whisper":
                     segments, info = self.model.transcribe(
                         audio_np,
                         language=lang_code,

@@ -34,7 +34,8 @@ DEFAULT_CONFIG = {
     "autostart": False,
     "selected_mic": None,
     "language": "auto",
-    "engine": "openai-whisper", # or "faster-whisper"
+    "engine": "gigaam",          # "openai-whisper", "faster-whisper", or "gigaam"
+    "gigaam_model": "v3_e2e_rnnt", # GigaAM model: v3_e2e_rnnt, v3_e2e_ctc, v3_rnnt, v3_ctc
     "window_pos": [20, 20],
     "window_size": [160, 40],
     "opacity": 0.9,

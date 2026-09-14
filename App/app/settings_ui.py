@@ -386,17 +386,34 @@ class SettingsDialog(QDialog):
 
         # Engine
         self.engine_cb = QComboBox()
+        self.engine_cb.addItem("GigaAM (Russian SoTA) ⭐", "gigaam")
         self.engine_cb.addItem("OpenAI Whisper", "openai-whisper")
         self.engine_cb.addItem("Faster Whisper", "faster-whisper")
-        idx = self.engine_cb.findData(self.config.get("engine", "openai-whisper"))
+        idx = self.engine_cb.findData(self.config.get("engine", "gigaam"))
         self.engine_cb.setCurrentIndex(idx if idx >= 0 else 0)
         self.add_info_row(form, "engine", self.engine_cb, "engine")
 
-        # Model
+        # GigaAM Model selector (shown only when engine == gigaam)
+        self.gigaam_model_label = QLabel("GigaAM Model:")
+        self.gigaam_model_cb = QComboBox()
+        self.gigaam_model_cb.addItem("v3_e2e_rnnt — Best quality + punctuation (600MB)", "v3_e2e_rnnt")
+        self.gigaam_model_cb.addItem("v3_e2e_ctc — Fast + punctuation (400MB)", "v3_e2e_ctc")
+        self.gigaam_model_cb.addItem("v3_rnnt — High quality (600MB)", "v3_rnnt")
+        self.gigaam_model_cb.addItem("v3_ctc — Lightweight (220MB)", "v3_ctc")
+        gm_idx = self.gigaam_model_cb.findData(self.config.get("gigaam_model", "v3_e2e_rnnt"))
+        self.gigaam_model_cb.setCurrentIndex(gm_idx if gm_idx >= 0 else 0)
+        form.addRow(self.gigaam_model_label, self.gigaam_model_cb)
+
+        # Whisper Model selector (hidden when GigaAM is selected)
+        self.model_label = QLabel("Whisper Model:")
         self.model_cb = QComboBox()
         self.model_cb.addItems(["tiny", "base", "small", "medium", "large", "distil-large-v3"])
         self.model_cb.setCurrentText(self.config["model_name"])
-        self.add_info_row(form, "model", self.model_cb, "model")
+        form.addRow(self.model_label, self.model_cb)
+
+        # Connect engine change to update model selector visibility
+        self.engine_cb.currentIndexChanged.connect(self._on_engine_changed)
+        self._on_engine_changed()  # Apply initial visibility
 
         # Transcribe Language
         self.lang_cb = QComboBox()
@@ -830,6 +847,14 @@ class SettingsDialog(QDialog):
         else:
             QMessageBox.warning(self, tr("status_error"), f"Failed to restart service:\n{msg}")
 
+    def _on_engine_changed(self):
+        """Show/hide GigaAM or Whisper model selectors based on selected engine."""
+        is_gigaam = self.engine_cb.currentData() == "gigaam"
+        self.gigaam_model_label.setVisible(is_gigaam)
+        self.gigaam_model_cb.setVisible(is_gigaam)
+        self.model_label.setVisible(not is_gigaam)
+        self.model_cb.setVisible(not is_gigaam)
+
     def _on_use_gpu_toggled(self, state):
         from PySide6.QtCore import Qt
         if state == Qt.Checked or state == 2:
@@ -874,6 +899,7 @@ class SettingsDialog(QDialog):
         self.config["local_whisper_enabled"] = self.local_enabled_chk.isChecked()
         self.config["selected_mic"] = self.mic_cb.currentData()
         self.config["engine"] = self.engine_cb.currentData()
+        self.config["gigaam_model"] = self.gigaam_model_cb.currentData()
         self.config["language"] = self.lang_cb.currentData()
         self.config["ui_language"] = self.ui_lang_cb.currentData()
         self.config["output_mode"] = self.output_cb.currentText()

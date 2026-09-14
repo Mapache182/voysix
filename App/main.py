@@ -79,8 +79,9 @@ class AppController(QObject):
             
         self.transcriber = WhisperTranscriber(
             self.config["model_name"], 
-            self.config.get("engine", "openai-whisper"),
-            use_gpu=self.config.get("use_gpu", False)
+            self.config.get("engine", "gigaam"),
+            use_gpu=self.config.get("use_gpu", False),
+            gigaam_model=self.config.get("gigaam_model", "v3_e2e_rnnt")
         )
         self.last_toggle_time = 0
         self.min_recording_duration = 0.5 # 500ms
@@ -275,7 +276,7 @@ class AppController(QObject):
         except Exception as e:
             print(f"Error in on_abort: {e}")
 
-    def load_model_async(self, model_name=None, engine=None, use_gpu=None):
+    def load_model_async(self, model_name=None, engine=None, use_gpu=None, gigaam_model=None):
         if getattr(self.transcriber, 'loading', False):
              print("Reload already in progress, ignoring.")
              return
@@ -286,7 +287,7 @@ class AppController(QObject):
                 # 🔹 GIVE OS A MOMENT to settle after dialog close and before new thread starts heavy work
                 # This helps preventing 0xc0000005 when COM objects are being GC'd
                 time.sleep(0.5)
-                self.transcriber.load_model(model_name, engine, use_gpu)
+                self.transcriber.load_model(model_name, engine, use_gpu, gigaam_model=gigaam_model)
             except Exception as e:
                 print(f"Async Model Load Error: {e}")
             finally:
@@ -512,7 +513,8 @@ class AppController(QObject):
             return {
                 "language": self.config.get("language", "auto"),
                 "model_name": self.config.get("model_name", "base"),
-                "engine": self.config.get("engine", "openai-whisper"),
+                "engine": self.config.get("engine", "gigaam"),
+                "gigaam_model": self.config.get("gigaam_model", "v3_e2e_rnnt"),
                 "beam_size": self.config.get("beam_size", 5),
                 "temperature": self.config.get("temperature", 0.0),
                 "initial_prompt": build_voice_prompt(self.config.get("initial_prompt", ""), voice_enabled),
@@ -733,18 +735,20 @@ class AppController(QObject):
                 print("Local Whisper disabled in settings. Unloading model...")
                 self.transcriber.unload_model()
         
-        # If model, engine, or gpu changed (and local is enabled), OR if it was re-enabled
+        # If model, engine, gpu or gigaam_model changed (and local is enabled), OR if it was re-enabled
         elif (self.config.get("local_whisper_enabled", True) and (
             self.transcriber.model_name != self.config["model_name"] or \
             self.transcriber.engine != self.config["engine"] or \
             getattr(self.transcriber, 'use_gpu', False) != self.config.get("use_gpu", False) or \
+            getattr(self.transcriber, 'gigaam_model', 'v3_e2e_rnnt') != self.config.get("gigaam_model", "v3_e2e_rnnt") or \
             (self.transcriber.model is None and not self.config.get("unload_idle", False))
         )):
             print("Local Whisper configuration changed. Reloading model dynamically...")
             self.load_model_async(
                 self.config["model_name"], 
-                self.config.get("engine", "openai-whisper"),
-                self.config.get("use_gpu", False)
+                self.config.get("engine", "gigaam"),
+                self.config.get("use_gpu", False),
+                gigaam_model=self.config.get("gigaam_model", "v3_e2e_rnnt")
             )
 
     def show_floating_context_menu(self, pos):

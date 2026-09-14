@@ -2,6 +2,8 @@ fastapi
 uvicorn[standard]
 openai-whisper
 faster-whisper
+gigaam @ git+https://github.com/salute-developers/GigaAM.git
+soundfile
 torch
 torchaudio
 python-multipart

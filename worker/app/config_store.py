@@ -4,9 +4,9 @@ import os
 _lock = threading.Lock()
 
 _config = {
-    "model": os.getenv("MODEL_NAME", "base"),
+    "model": os.getenv("MODEL_NAME", "v3_e2e_rnnt"),
     "language": "auto",
-    "engine": "openai-whisper",
+    "engine": os.getenv("ENGINE", "gigaam"),
     "device": os.getenv("DEFAULT_DEVICE", "cpu"), # 'cpu' or 'cuda'
     "temperature": 0.0,
     "beam_size": 1,
@@ -23,9 +23,12 @@ _config = {
 }
 
 _capabilities = {
-    "models": ["base", "small", "medium", "large", "distil-large-v3"],
+    "models": [
+        "v3_e2e_rnnt", "v3_e2e_ctc", "v3_rnnt", "v3_ctc",
+        "tiny", "base", "small", "medium", "large", "distil-large-v3"
+    ],
     "languages": ["auto", "en", "ru"],
-    "engines": ["openai-whisper", "faster-whisper"],
+    "engines": ["gigaam", "openai-whisper", "faster-whisper"],
     "devices": ["cpu", "cuda"]
 }
 

@@ -1,6 +1,6 @@
 openai-whisper
 numba>=0.59.0
-gigaam
+gigaam @ git+https://github.com/salute-developers/GigaAM.git
 sounddevice
 pynput
 pyautogui

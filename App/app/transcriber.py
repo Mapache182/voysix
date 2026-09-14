@@ -172,17 +172,25 @@ class WhisperTranscriber:
                 lang_code = None if language == "auto" else language
                 
                 if self.engine == "gigaam":
-                    # GigaAM accepts raw numpy float32 16kHz — exactly our format
-                    result = self.model.transcribe(audio_np)
+                    # Convert numpy array directly to torch tensor avoiding ffmpeg subprocess dependency
+                    try:
+                        wav = torch.from_numpy(audio_np).float()
+                        wav = wav.to(self.model._device).to(self.model._dtype).unsqueeze(0)
+                        length = torch.full([1], wav.shape[-1], device=self.model._device)
+                        encoded, encoded_len = self.model.forward(wav, length)
+                        decoded = self.model._decode(encoded, encoded_len, length, word_timestamps=False)
+                        text = decoded[0][0] if decoded else ""
+                        result = text
+                    except Exception as fe:
+                        print(f"DEBUG: Direct tensor decode fallback to standard transcribe: {fe}")
+                        result = self.model.transcribe(audio_np)
+
                     if cancellation_callback and cancellation_callback():
                         return None
-                    # result may be a string or a TranscriptionResult object
                     if isinstance(result, str):
                         return result.strip()
-                    # Handle TranscriptionResult (has .text attribute)
                     if hasattr(result, 'text'):
                         return result.text.strip()
-                    # Fallback: try string conversion
                     return str(result).strip()
                 elif self.engine == "faster-whisper":
                     segments, info = self.model.transcribe(

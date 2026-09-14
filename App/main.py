@@ -8,6 +8,45 @@ import platform
 # This must be done BEFORE importing whisper or numba.
 sys.modules['coverage'] = None
 
+# 🔹 Workaround for torio / torchaudio bug under Python -OO or cx_Freeze optimize=2:
+# When docstrings are stripped, torio's @_format_audio_args / @_format_common_args decorators
+# attempt obj.__doc__.format(...) where obj.__doc__ is None, causing:
+# AttributeError: 'NoneType' object has no attribute 'format'
+import importlib.abc
+class _TorioDocstringMetaFinder(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path, target=None):
+        if fullname in ('torio.io._streaming_media_decoder', 'torio.io._streaming_media_encoder'):
+            for finder in sys.meta_path:
+                if finder is self:
+                    continue
+                if hasattr(finder, 'find_spec'):
+                    spec = finder.find_spec(fullname, path, target)
+                    if spec and getattr(spec, 'loader', None):
+                        orig_loader = spec.loader
+                        class _PatchedLoader(importlib.abc.Loader):
+                            def create_module(self, s):
+                                return orig_loader.create_module(s)
+                            def exec_module(self, module):
+                                if hasattr(orig_loader, 'get_source'):
+                                    try:
+                                        src = orig_loader.get_source(fullname)
+                                        if src:
+                                            src = src.replace(
+                                                'obj.__doc__ = obj.__doc__.format(**kwargs)',
+                                                'if obj.__doc__: obj.__doc__ = obj.__doc__.format(**kwargs)'
+                                            )
+                                            code = compile(src, spec.origin, 'exec')
+                                            exec(code, module.__dict__)
+                                            return
+                                    except Exception:
+                                        pass
+                                orig_loader.exec_module(module)
+                        spec.loader = _PatchedLoader()
+                        return spec
+        return None
+
+sys.meta_path.insert(0, _TorioDocstringMetaFinder())
+
 # Prioritize local project directory to avoid importing from "Program Files"
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -492,10 +531,16 @@ class AppController(QObject):
         """Helper to get a dictionary of parameters based on engine mode."""
         voice_enabled = self.config.get("voice_actions_enabled", True)
         if is_remote:
+            remote_engine = self.config.get("remote_engine", "gigaam")
+            if remote_engine == "gigaam":
+                remote_model = self.config.get("remote_gigaam_model", "v3_e2e_rnnt")
+            else:
+                remote_model = self.config.get("remote_model_name", "base")
+
             return {
                 "language": self.config.get("remote_language", "auto"),
-                "model_name": self.config.get("remote_model_name", "base"),
-                "engine": self.config.get("remote_engine", "openai-whisper"),
+                "model_name": remote_model,
+                "engine": remote_engine,
                 "beam_size": self.config.get("remote_beam_size", 5),
                 "temperature": self.config.get("remote_temperature", 0.0),
                 "initial_prompt": build_voice_prompt(self.config.get("initial_prompt", ""), voice_enabled),

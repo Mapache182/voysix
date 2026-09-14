@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/github/license/your-username/voysix)
 ![Release](https://img.shields.io/github/v/release/your-username/voysix?include_prereleases)
 
-**Voysix** is an open-source, versatile desktop application that brings the power of **OpenAI's Whisper** (and `faster-whisper`) directly into your daily workflow. Record your ideas, messages, or notes with a single hotkey and have them transcribed and pasted instantly into any application.
+**Voysix** is an open-source, versatile desktop application that brings the power of **GigaAM** (Sber SoTA Russian ASR) and **OpenAI's Whisper** (plus `faster-whisper`) directly into your daily workflow. Record your ideas, messages, or notes with a single hotkey and have them transcribed and pasted instantly into any application.
 
 ---
 
@@ -139,7 +139,8 @@ Pass these to the container using `-e KEY=VALUE`.
 | :--- | :--- | :--- | :--- |
 | `TS_AUTHKEY` | **Required** | Your Tailscale Auth Key to join the private network. Generate it in Tailscale Settings. | - |
 | `API_KEY` | Optional | Shared secret between the app and worker. Must match the "Worker API Key" in the app settings. | - |
-| `MODEL_NAME` | Optional | The Whisper model to load on startup (tiny, base, small, medium, large, distil-large-v3). | `base` |
+| `ENGINE` | Optional | Transcription engine (`gigaam`, `openai-whisper`, `faster-whisper`). | `gigaam` |
+| `MODEL_NAME` | Optional | The model to load on startup (e.g., `v3_e2e_rnnt`, `v3_e2e_ctc`, `v3_ctc` for GigaAM; `tiny`, `base`, `small`, `medium`, `large` for Whisper). | `v3_e2e_rnnt` |
 | `GPU_ENABLED` | Optional | Set to `1` to enable NVIDIA GPU support. This triggers automatic download of CUDA libraries (~3GB). | `0` |
 | `TS_HOSTNAME` | Optional | The hostname visible in your Tailscale admin panel. | `voysix-worker` |
 

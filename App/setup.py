@@ -33,7 +33,8 @@ packages = [
     "os", "sys", "whisper", "faster_whisper", "huggingface_hub", "tokenizers", 
     "sounddevice", "numpy", "pynput", "pyautogui", "pyperclip", "threading", 
     "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets",
-    "torch", "json", "ctypes", "psutil", 
+    "torch", "torchaudio", "torio", "gigaam", "hydra", "omegaconf", "sentencepiece",
+    "json", "ctypes", "psutil", 
     "requests", "chardet", "idna", "certifi", "soundfile"
 ]
 if sys.platform == "win32":

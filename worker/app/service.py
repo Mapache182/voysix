@@ -55,7 +55,16 @@ def get_model(name: str, engine: str, device: str):
     key = (name, engine, device)
     if key not in _models:
         print(f"--- [Worker] Loading model '{name}' ({engine}) on {device} ---")
-        if engine == "faster-whisper":
+        if engine == "gigaam":
+            import gigaam
+            model = gigaam.load_model(name)
+            if device != "cpu":
+                try:
+                    model = model.to(device)
+                except Exception as e:
+                    print(f"--- [Worker] GigaAM GPU move failed ({e}), using CPU ---")
+            _models[key] = model
+        elif engine == "faster-whisper":
             # For Faster-Whisper we use int8 on CPU and float16 on GPU for maximum speed
             compute_type = "float16" if device == "cuda" else "int8"
             _models[key] = WhisperModel(name, device=device, compute_type=compute_type, download_root=MODELS_DIR)
@@ -116,7 +125,16 @@ def transcribe_audio(audio_bytes: bytes) -> str:
                 tmp.flush()
 
                 t_start = time.time()
-                if engine == "faster-whisper":
+                if engine == "gigaam":
+                    # GigaAM accepts file path (wav, flac, etc.) directly
+                    res = model.transcribe(tmp.name)
+                    if isinstance(res, str):
+                        text = res.strip()
+                    elif hasattr(res, 'text'):
+                        text = res.text.strip()
+                    else:
+                        text = str(res).strip()
+                elif engine == "faster-whisper":
                     # Faster Whisper API
                     segments, info = model.transcribe(
                         tmp.name,

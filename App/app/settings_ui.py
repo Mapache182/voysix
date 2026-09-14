@@ -555,11 +555,23 @@ class SettingsDialog(QDialog):
 
         # Remote Engine
         self.remote_engine_cb = QComboBox()
+        self.remote_engine_cb.addItem("GigaAM (Russian SoTA) ⭐", "gigaam")
         self.remote_engine_cb.addItem("OpenAI Whisper", "openai-whisper")
         self.remote_engine_cb.addItem("Faster Whisper", "faster-whisper")
-        idx = self.remote_engine_cb.findData(self.config.get("remote_engine", "openai-whisper"))
+        idx = self.remote_engine_cb.findData(self.config.get("remote_engine", "gigaam"))
         self.remote_engine_cb.setCurrentIndex(idx if idx >= 0 else 0)
         self.add_info_row(form, "engine", self.remote_engine_cb, "engine")
+
+        # Remote GigaAM Model
+        self.remote_gigaam_model_label = QLabel("Remote GigaAM Model:")
+        self.remote_gigaam_model_cb = QComboBox()
+        self.remote_gigaam_model_cb.addItem("v3_e2e_rnnt — Best quality + punctuation (600MB)", "v3_e2e_rnnt")
+        self.remote_gigaam_model_cb.addItem("v3_e2e_ctc — Fast + punctuation (400MB)", "v3_e2e_ctc")
+        self.remote_gigaam_model_cb.addItem("v3_rnnt — High quality (600MB)", "v3_rnnt")
+        self.remote_gigaam_model_cb.addItem("v3_ctc — Lightweight (220MB)", "v3_ctc")
+        rgm_idx = self.remote_gigaam_model_cb.findData(self.config.get("remote_gigaam_model", "v3_e2e_rnnt"))
+        self.remote_gigaam_model_cb.setCurrentIndex(rgm_idx if rgm_idx >= 0 else 0)
+        form.addRow(self.remote_gigaam_model_label, self.remote_gigaam_model_cb)
 
         # Remote Audio Format
         self.remote_audio_format_cb = QComboBox()
@@ -570,11 +582,16 @@ class SettingsDialog(QDialog):
         self.remote_audio_format_cb.setCurrentIndex(idx if idx >= 0 else 0)
         self.add_info_row(form, "Audio Format", self.remote_audio_format_cb, "audio_format")
 
-        # Remote Model
+        # Remote Model (Whisper)
+        self.remote_model_label = QLabel(tr("model") + ":")
         self.remote_model_cb = QComboBox()
         self.remote_model_cb.addItems(["tiny", "base", "small", "medium", "large", "distil-large-v3"])
         self.remote_model_cb.setCurrentText(self.config.get("remote_model_name", "base"))
-        self.add_info_row(form, "model", self.remote_model_cb, "model")
+        form.addRow(self.remote_model_label, self.remote_model_cb)
+
+        # Connect remote engine change to update visibility
+        self.remote_engine_cb.currentIndexChanged.connect(self._on_remote_engine_changed)
+        self._on_remote_engine_changed()
 
         # Remote Language
         self.remote_lang_cb = QComboBox()
@@ -855,6 +872,14 @@ class SettingsDialog(QDialog):
         self.model_label.setVisible(not is_gigaam)
         self.model_cb.setVisible(not is_gigaam)
 
+    def _on_remote_engine_changed(self):
+        """Show/hide remote GigaAM or Whisper model selectors based on selected remote engine."""
+        is_gigaam = self.remote_engine_cb.currentData() == "gigaam"
+        self.remote_gigaam_model_label.setVisible(is_gigaam)
+        self.remote_gigaam_model_cb.setVisible(is_gigaam)
+        self.remote_model_label.setVisible(not is_gigaam)
+        self.remote_model_cb.setVisible(not is_gigaam)
+
     def _on_use_gpu_toggled(self, state):
         from PySide6.QtCore import Qt
         if state == Qt.Checked or state == 2:
@@ -945,6 +970,7 @@ class SettingsDialog(QDialog):
         # New remote-specific transcription settings
         self.config["remote_model_name"] = self.remote_model_cb.currentText()
         self.config["remote_engine"] = self.remote_engine_cb.currentData()
+        self.config["remote_gigaam_model"] = self.remote_gigaam_model_cb.currentData()
         self.config["remote_audio_format"] = self.remote_audio_format_cb.currentData()
         self.config["remote_language"] = self.remote_lang_cb.currentData()
         self.config["remote_beam_size"] = self.remote_beam_size_sb.value()

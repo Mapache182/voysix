@@ -25,4 +25,3 @@ build_worker:
     - docker build --cache-from=$DOCKER_IMAGE_WORKER_LATEST -t $DOCKER_IMAGE_WORKER -t $DOCKER_IMAGE_WORKER_LATEST -f worker/Dockerfile worker/
     - docker push $DOCKER_IMAGE_WORKER
     - docker push $DOCKER_IMAGE_WORKER_LATEST
-
